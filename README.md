@@ -8,10 +8,10 @@ Ciências do Ambiente, UTFPR. Marcos M1–M4 do ciclo CDIO.
   telemetria de ônibus (URBS), semáforos e fatores de emissão são **provisórios** (`data/placeholders/`, geradores sintéticos
   com semente fixa). Os relatórios marcam esses valores com o selo *PROVISÓRIO*.
 - **Os resultados são um teste de método, não previsão para Curitiba.** A rede simulada opera saturada.
-- **Resultado do M4 (negativo):** em 5 sementes por janela, nem o controlador PI nem a prioridade ao ônibus melhoraram o cenário
-  As-Is (`actuated` do SUMO); ambos reduziram a velocidade média e elevaram as emissões na simulação.
+- **Resultado do M4:** o controlador PI sobre programas fixos piora a rede de forma robusta (velocidade −16% a −17%). A prioridade ao ônibus (regra refeita) e a onda verde (Rua Mariano Torres) não mostram ganho consistente; a onda verde reduz fila e *teleports* mas reduz a velocidade no eixo. O As-Is só deixa de engarrafar com ~50% da demanda (varredura). Uma versão anterior do relatório concluía o contrário para a prioridade ao ônibus; a mudança vem de uma regra refeita e de contabilidade corrigida (ver M4).
 - **Calibração GEH (M2):** critério de 85% *não atendido* (manhã 76,5%, tarde 82,4%), sobre contagens sorteadas e só 2 pontos com aproximação motorizada.
-- **Onda verde adaptativa: não implementada.** Esquemas elétricos: apenas diagrama em blocos.
+- **Onda verde:** implementada na Rua Mariano Torres (a Av. Floriano não recebeu semáforos na inferência); fase/ciclo/posição dos semáforos são inferidos. Esquemas elétricos: apenas diagrama em blocos.
+- **Fila e ruído:** fila (`queue-output`) e ruído por CoRTN e harmonoise estão no M2/M4; harmonoise é um nível por aresta, sem propagação a receptores.
 
 ## Estrutura
 
@@ -32,7 +32,7 @@ uv sync
 make data && make dashboard        # M1
 make net && make calibrate && make baseline   # M2
 make tune && make mqtt             # M3
-make evaluate && make active       # M4 (cerca de uma hora de CPU)
+make evaluate && make sweep && make summary && make active   # M4 (cerca de 1,5 h de CPU em 12 núcleos)
 make report-m1 report-m2 report-m3 report-m4  # PDFs em report/
 make test
 ```

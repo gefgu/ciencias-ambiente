@@ -1,7 +1,7 @@
 """Pegada de carbono e poluentes do As-Is nas janelas de pico (memorial de cálculo do M2).
 
-Contabilidade: emissões e distância percorrida vêm do MESMO edgeData (0–5400 s, todos os veículos, inclusive os que ainda
-estão na rede ao fim), de modo que g/km não mistura períodos nem populações. Atrasos vêm dos veículos concluídos (viés para baixo,
+Contabilidade: emissões e distância percorrida vêm do MESMO edgeData (0–3600 s: a hora de demanda, todos os veículos, inclusive os que ainda
+estão na rede), de modo que g/km não mistura períodos nem populações. Atrasos vêm dos veículos concluídos (viés para baixo,
 reportado junto de inseridos/concluídos/em espera).
 
 Ressuspensão: US EPA AP-42 cap. 13.2.1, vias pavimentadas, E = k·sL^0,91·W^1,02·(1−P/4N)  [g/VMT],
@@ -36,8 +36,8 @@ def resusp_g_per_km(pm: str) -> float:
 
 def read(win: str, tag: str = "asis") -> dict:
     prof = pd.read_csv(PH / "hourly_profile.csv").fracao_vpd.tolist()
-    emi = pd.DataFrame([{k: float(v) for k, v in x.attrib.items() if k != "id"} for x in ET.parse(WORK / f"edge_emi_{tag}_{win}.xml").iter("edge")])
-    flw = pd.DataFrame([{k: float(v) for k, v in x.attrib.items() if k != "id"} for x in ET.parse(WORK / f"edge_flow_{tag}_{win}.xml").iter("edge")])
+    emi = pd.DataFrame([{k: float(v) for k, v in x.attrib.items() if k != "id"} for x in ET.parse(WORK / f"edge_emi1h_{tag}_{win}.xml").iter("edge")])
+    flw = pd.DataFrame([{k: float(v) for k, v in x.attrib.items() if k != "id"} for x in ET.parse(WORK / f"edge_flow1h_{tag}_{win}.xml").iter("edge")])
     tot_mg = {k: float(emi[f"{k}_abs"].sum()) for k in ("CO2", "CO", "NOx", "PMx", "HC", "fuel")}
     dist_m = float((flw.speed * flw.sampledSeconds).sum())   # distância = velocidade média × segundos amostrados, somada nas arestas
     km = dist_m / 1000                       # veículos-km de TODOS os veículos, mesmo período das emissões
@@ -50,8 +50,9 @@ def read(win: str, tag: str = "asis") -> dict:
     bus = ti[ti.type == "bus"]
     sc = window_scale(win, prof)
     kg = lambda mg: mg / 1e6
-    from .evaluate import noise_levels
+    from .evaluate import noise_levels, metrics as _m
     nl = noise_levels(tag, win)
+    mm = _m(tag, win)
     return {"window": win, "label": WINDOWS[win]["label"], "scale_to_window": round(sc, 3),
             "loaded": int(v["loaded"]), "inserted": int(v["inserted"]), "finished": len(ti), "running_at_end": int(v["running"]), "waiting_to_enter_at_end": int(v["waiting"]),
             "depart_delay_s": round(float(vs["departDelay"]), 1), "veh_km": round(km, 1), "mean_speed_kmh": round(spd, 1),
@@ -62,11 +63,11 @@ def read(win: str, tag: str = "asis") -> dict:
             "fleet_weight_short_tons": round(fleet_weight_short_tons(), 2),
             "resuspension_window_kg": {pm: round(resusp_g_per_km(pm) * km * sc / 1000, 2) for pm in K_PM},
             "resuspension_g_per_km": {pm: round(resusp_g_per_km(pm), 4) for pm in K_PM},
-            "noise_leq_dba": {k: round(x, 1) for k, x in nl.items()}}
+            "noise_leq_dba": {k: round(x, 1) for k, x in nl.items()}, "queue_p95_m": round(mm["q_p95_m"], 1), "queue_max_mean_m": round(mm["q_max_mean_m"], 1)}
 
 
 def main():
-    res = {w: read(w) for w in ("am", "pm") if (WORK / f"edge_emi_asis_{w}.xml").exists()}
+    res = {w: read(w) for w in ("am", "pm") if (WORK / f"edge_emi1h_asis_{w}.xml").exists()}
     (OUT / "m2_baseline.json").write_text(json.dumps(res, indent=1, ensure_ascii=False))
     return res
 

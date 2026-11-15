@@ -8,11 +8,9 @@ from .controllers import Controller, Params, State
 
 def write_add(win: str, tag: str):
     """Saídas com o tag no nome: não sobrescrevem as do As-Is."""
+    from .simrun import additional_xml
     f = WORK / f"detectors_{tag}_{win}.add.xml"
-    f.write_text(f'''<additional>
-  <edgeData id="flow" file="{WORK}/edge_flow_{tag}_{win}.xml" begin="0" end="5400" excludeEmpty="true"/>
-  <edgeData id="emi" type="emissions" file="{WORK}/edge_emi_{tag}_{win}.xml" begin="0" end="5400" excludeEmpty="true"/>
-</additional>''')
+    f.write_text(additional_xml(f"{WORK}/", tag, win))
     return f
 
 
@@ -53,14 +51,18 @@ def to_static(tm: TlsMap, only: list[str] | None = None):
         traci.trafficlight.setProgramLogic(t, new)
 
 
-def measure(tm: TlsMap, t: str, buses: set[str], bus_dist: float = 120.0) -> State:
+def measure(tm: TlsMap, t: str, buses: set[str], bus_dist: float = 120.0, served: set | None = None, last_red: dict | None = None) -> State:
     ph = traci.trafficlight.getPhase(t)
     g = tm.green_lanes[t][ph]
     r = tm.all_lanes[t] - g
     q_g = sum(traci.lane.getLastStepHaltingNumber(l) for l in g)
     q_r = sum(traci.lane.getLastStepHaltingNumber(l) for l in r)
     occ = sum(traci.lane.getLastStepOccupancy(l) for l in g) / max(len(g), 1)
+    co2 = sum(traci.lane.getCO2Emission(l) for l in tm.all_lanes[t]) / 1000.0   # mg/s -> g/s
     bg = br = False
+    nxt = True
+    reds = []
+    n_ph = len(tm.green_lanes[t])
     for b in buses:
         try:
             ln = traci.vehicle.getLaneID(b)
@@ -71,9 +73,14 @@ def measure(tm: TlsMap, t: str, buses: set[str], bus_dist: float = 120.0) -> Sta
         if tm.lane_len[ln] - traci.vehicle.getLanePosition(b) < bus_dist:
             if ln in g:
                 bg = True
-            else:
+            elif traci.vehicle.getSpeed(b) > 1.0 and not (served is not None and (b, t) in served):  # ônibus em ponto (parado) não pede prioridade; 1 pedido por ônibus/semáforo
                 br = True
-    return State(ph, traci.trafficlight.getSpentDuration(t), tm.is_green[t][ph], q_g, q_r, bg, br, occ)
+                reds.append(b)
+                k = next((k for k in ((ph + i) % n_ph for i in range(1, n_ph)) if tm.is_green[t][k]), None)
+                nxt = nxt and (k is not None and ln in tm.green_lanes[t][k])
+    if last_red is not None:
+        last_red[t] = reds
+    return State(ph, traci.trafficlight.getSpentDuration(t), tm.is_green[t][ph], q_g, q_r, bg, br, occ, nxt if br else True, co2)
 
 
 def apply(t: str, action: str, secs: float, now: float):
@@ -85,22 +92,32 @@ def apply(t: str, action: str, secs: float, now: float):
 
 def run(win: str = "am", routes=None, adaptive: bool = True, bus_priority: bool = True, params: Params | None = None, tag: str = "tobe",
         seed: int = 1, end: int = 5400, fake_bus_every: int = 0, bridge=None, max_sim_s: int | None = None, only_tls: list[str] | None = None, extra: list[str] | None = None,
-        net: str = "net.net.xml", extra_routes: str | None = None, static: bool = True) -> dict:
+        net: str = "net.net.xml", extra_routes: str | None = None, static: bool = True, scale: float = 1.0, greenwave: bool = False) -> dict:
     add = write_add(win, tag)
     routes = routes or SIM / f"routes_asis_{win}.rou.xml"
     cmd = ["sumo", "-n", str(SIM / net), "-r", str(routes) + (f",{extra_routes}" if extra_routes else ""), "-a", f"{SIM / 'vtypes.add.xml'},{add}", "--begin", "0", "--end", str(end),
            "--seed", str(seed), "--time-to-teleport", "300", "--no-step-log", "true", "--no-warnings", "true", "--step-length", "1",
-           "--tripinfo-output", str(WORK / f"tripinfo_{tag}_{win}.xml"), "--statistic-output", str(WORK / f"stats_{tag}_{win}.xml")] + (extra or [])
+           "--tripinfo-output", str(WORK / f"tripinfo_{tag}_{win}.xml"), "--statistic-output", str(WORK / f"stats_{tag}_{win}.xml"),
+           "--queue-output", str(WORK / f"queue_{tag}_{win}.xml"), "--queue-output.aggregation", "3600", "--queue-output.percentile", "95",
+           "--scale", str(scale)] + (extra or [])
     traci.start(cmd, label=f"{tag}_{win}")
     p = params or Params(bus_switch=bus_priority)
     p.bus_switch = bus_priority and p.bus_switch
     tm = TlsMap()
     ctl_ids = [t for t in tm.ids if (only_tls is None or t in only_tls)]
-    if adaptive and static:
+    if adaptive and static and not greenwave:
         to_static(tm, ctl_ids)   # só os controlados; static=False: sobrepõe comandos à lógica actuated original
     ctrls = {t: Controller(Params(**p.__dict__)) for t in tm.ids}
     buses: set[str] = set()
     n_dep = 0
+    served: set = set()
+    last_red: dict = {}
+    gw = None
+    if greenwave:
+        from . import greenwave as G
+        corr = G.select_corridor(str(SIM / net))
+        G.save_corridor(corr)
+        gw = G.GreenWave(tm, corr)
     counts = {"extend": 0, "switch": 0, "hold": 0}
     t0 = time.time()
     step = 0
@@ -116,11 +133,15 @@ def run(win: str = "am", routes=None, adaptive: bool = True, bus_priority: bool 
                 buses.add(v)
         for v in traci.simulation.getArrivedIDList():
             buses.discard(v)
+        if gw is not None and step % G.UPDATE_S == 0:
+            gw.update(now)
         if adaptive and step % int(p.step) == 0:
             for t in ctl_ids:
-                s = measure(tm, t, buses)
+                s = measure(tm, t, buses, served=served, last_red=last_red)
                 a, secs = bridge.exchange(t, s, now) if bridge else ctrls[t].decide(s)
                 counts[a] += 1
+                if a == "switch":
+                    served.update((b, t) for b in last_red.get(t, []))
                 if a != "hold":
                     apply(t, a, secs, now)
     traci.close()

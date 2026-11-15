@@ -71,7 +71,7 @@ class MqttBridge:
         # mensagem de sensores conforme o contrato (validada) + estado interno para o controlador
         msg = {"timestamp": datetime.now(timezone.utc).isoformat(), "intersection_id": iid,
                "sensors": [{"sensor_id": f"loop_green", "state": "occupied" if s.occ_green > 0 else "free", "vehicle_speed_kmh": None}],
-               "instantaneous_metrics": {"queue_length_meters": 7.5 * (s.q_green + s.q_red), "co2_grams_per_second": 0.0}}  # CO2 instantâneo não é estimado no nó sensor (campo exigido pelo contrato; preencher com o modelo de emissões)
+               "instantaneous_metrics": {"queue_length_meters": 7.5 * (s.q_green + s.q_red), "co2_grams_per_second": round(float(getattr(s, "co2_gps", 0.0)), 3)}}  # CO2 instantâneo das faixas de aproximação (do modelo de emissões do SUMO)
         IntersectionMessage.model_validate(msg)
         self.sensor.publish(f"{BASE}/{iid}/sensors/loop_green", json.dumps(msg), qos=0)
         self.sensor.publish(f"{BASE}/{iid}/metrics", json.dumps({"timestamp": msg["timestamp"], "queue_length_meters": msg["instantaneous_metrics"]["queue_length_meters"]}), qos=0)

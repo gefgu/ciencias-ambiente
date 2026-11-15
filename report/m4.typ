@@ -1,43 +1,44 @@
 #import "lib.typ": *
 
 #let R = json("figures/m4_results.json")
+#let SW = json("figures/m4_sweep.json")
 #let AC = json("figures/m4_active.json")
 #let EX = json("figures/m4_extra.json")
+#let TP = json("figures/m4_teleports.json")
 #let fix(x, d) = {
-  if d == 0 { return str(int(calc.round(float(x)))) }
+  if d == 0 { return str(int(calc.round(float(x)))).replace("-", "−") }
   let s = str(calc.round(float(x), digits: d))
   if not s.contains(".") { s = s + "." + "0" * d } else { let n = s.split(".").at(1).len(); s = s + "0" * (d - n) }
-  s.replace(".", ",")
+  s.replace(".", ",").replace("-", "−")
 }
 #let f1(x) = fix(x, 1)
-#let f2(x) = fix(x, 2)
 #let f0(x) = {
-  let s = str(calc.round(float(x), digits: 0)).replace(regex("\.0$"), "")
+  let s = str(int(calc.round(float(x))))
   s.clusters().rev().chunks(3).map(c => c.join()).join(".").clusters().rev().join()
 }
+#let sg(v, d: 0) = if v > 0 { "+" + fix(v, d) } else { fix(v, d) }
 #let pm(o, d: 1) = [#fix(o.mean, d) ± #fix(o.ci95, d)]
-#let pc(o) = if o.at("delta_pct", default: none) == none { [n/d] } else {
-  let v = o.delta_pct
-  let s = if v > 0 { "+" } else { "" }
-  [#s#fix(v, 1)%]
+#let D(w, s, m) = R.at(w).at(s).at(m)
+#let dp(w, s, m) = sg(D(w, s, m).delta_pct)
+#let pp(w, s, m) = fix(D(w, s, m).p_paired, 2)
+#let cell(w, s, m) = {
+  let o = D(w, s, m)
+  if o.at("delta_pct", default: none) == none { [n/d] } else { [#sg(o.delta_pct)% (#fix(o.p_paired, 2))] }
 }
-#let pv(o) = if o.at("p_paired", default: none) == none { [n/d] } else if o.p_paired < 0.001 { [< 0,001] } else { [#fix(o.p_paired, 3)] }
 
-// linhas da tabela de comparação (To-Be × As-Is) para uma janela
-#let rows(w) = {
-  let items = (
-    ("Atraso médio dos concluídos (s)", "delay_s", 0), ("Velocidade média espacial (km/h)", "speed_kmh", 1), ("Veículos concluídos", "finished", 0),
-    ("Teleports", "teleports", 0), ("Atraso médio dos ônibus (s)", "bus_delay_s", 0), ("CO₂ na janela (t)", "CO2_t_window", 1),
-    ("CO₂ por veículo-km (g/km)", "CO2_g_per_vkm", 0), ("NOx na janela (kg)", "NOx_kg_window", 1), ("CO na janela (kg)", "CO_kg_window", 0),
-    ("MP escapamento (kg)", "PMx_kg_window", 2), ("Leq médio estimado (dB)", "Leq_mean_dba", 1))
-  items.map(it => {
-    let a = R.at(w).asis.at(it.at(1))
-    let b = R.at(w).tobe.at(it.at(1))
-    let c = R.at(w).tobe_pi.at(it.at(1))
-    let d = R.at(w).tobe_fake.at(it.at(1))
-    (it.at(0), pm(a, d: it.at(2)), pm(b, d: it.at(2)), pc(b), pv(b), pc(c), pc(d))
-  }).flatten()
-}
+#let ROWS = (
+  ("Velocidade média (km/h)", "speed_kmh", 1), ("Veículos concluídos", "finished", 0), ("Teleports", "teleports", 0), ("Fila p95 (m)", "q_p95_m", 0),
+  ("Atraso dos concluídos (s)", "delay_s", 0), ("Atraso dos ônibus (s)", "bus_delay_s", 0), ("CO₂ na janela (t)", "CO2_t_window", 1),
+  ("CO₂ por veículo-km (g)", "CO2_g_per_vkm", 0), ("NOx na janela (kg)", "NOx_kg_window", 1), ("Leq harmonoise (dB)", "Leq_harm_dba", 1),
+  ("Leq CoRTN (dB)", "Leq_cortn_dba", 1), ("Velocidade no eixo da onda verde (km/h)", "corridor_speed_kmh", 1))
+#let SC = ("tobe_pi", "tobe", "tobe_fake", "tobe_bus2", "tobe_gw")
+
+#let tbl(w, title) = figure(
+  table(columns: (3.3cm, 2.1cm, 1.9cm, 1.9cm, 1.9cm, 1.9cm, 1.9cm), align: (left, right, right, right, right, right, right), inset: (x: 3pt, y: 3.5pt),
+    [Indicador], [As-Is], [PI sobre fixos], [Actuated + ônibus], [Ablação ônibus falsos], [Prioridade condicional], [Onda verde],
+    ..ROWS.map(r => (r.at(0), pm(D(w, "asis", r.at(1)), d: r.at(2)), ..SC.map(s => cell(w, s, r.at(1))))).flatten()),
+  caption: [#title: As-Is em média ± IC 95% (5 réplicas); demais colunas em Δ% médio pareado (valor _p_ do teste _t_ pareado entre parênteses). Dados #ph(body: [provisórios]).],
+)
 
 #show: report.with(
   title: "Comparação As-Is × To-Be e viabilidade",
@@ -46,68 +47,75 @@
   authors: ((name: "Gustavo Henrique Bruno dos Santos", role: "Computação"), (name: "[integrante]", role: "Elétrica e Automação"), (name: "[integrante]", role: "Mecânica")),
   date: "15 de novembro de 2026",
   abstract: [
-    Compara o cenário atual (programas _actuated_ do SUMO) com duas intervenções, com cinco réplicas por cenário e janela e testes pareados por semente: (i) um controlador PI sobre programas fixos e
-    (ii) o _actuated_ com prioridade ao ônibus, mais uma ablação. *Neste modelo, e com estas implementações, nenhuma intervenção melhorou o cenário atual:* o PI reduziu a velocidade média de forma robusta
-    e elevou as emissões; a prioridade ao ônibus reduziu a velocidade (significativa na tarde, fraca na manhã) e elevou o CO₂ de modo estatisticamente fraco. O modelo é um cenário saturado, com demanda #ph(body: [provisória]),
-    semáforos inferidos e rotas de ônibus aleatórias, e várias métricas exigidas (fila, simulação acústica) não foram calculadas; o resultado não prevê o que ocorreria em Curitiba.
+    Compara o cenário atual (programas _actuated_ do SUMO) com quatro intervenções de controle semafórico e uma ablação, com cinco réplicas por cenário e janela, uma varredura de demanda e métricas de velocidade, fila, emissões e ruído.
+    *O controlador PI sobre programas fixos piora a rede de forma robusta; a prioridade ao ônibus (na versão refeita) e a onda verde não mostram ganho consistente.* Os resultados são sensíveis ao nível de demanda, e o As-Is só sai do engarrafamento com cerca de metade da demanda.
+    Todas as entradas são #ph(body: [provisórias]), o modelo está calibrado de forma insuficiente e a simulação acústica é aproximada: o documento entrega o método, os intervalos e a lista do que falta medir, não uma previsão para Curitiba.
   ],
 )
 
 = Resumo executivo
 
-- *O que foi feito.* Pipeline aberto e reproduzível (Overture/IPPUC → SUMO → calibração GEH → emissões, poeira e ruído) e duas intervenções de controle semafórico, avaliadas contra o cenário atual com 5 réplicas por janela.
-- *Resultado.* O PI sobre programas fixos piorou a rede (velocidade −24% na manhã e −30% na tarde; CO₂ +19% e +25%). A prioridade ao ônibus sobre o _actuated_ também a piorou (velocidade −11% e −17%; CO₂ +5% e +10%, com significância fraca na manhã). *Não houve redução de emissões.*
-- *Por que confiar pouco.* Demanda, semáforos, linhas de ônibus e perfil horário são provisórios; a calibração GEH não atingiu 85%; o As-Is está saturado (cerca de 13% dos veículos carregados ainda na rede ao fim e 210 a 230 _teleports_ por hora de demanda); e uma sintonia com uma única semente sugeria o contrário, o que mede a instabilidade do modelo.
-- *Não calculado.* Comprimento de fila; simulação acústica (só uma estimativa CoRTN em dois pontos); CO₂e e CO₂ biogênico; onda verde.
-- *O que falta para valer como engenharia.* Contagens e Leq de campo, fases dos semáforos, itinerários da URBS, e um As-Is calibrado que não esteja em gargalo (ver a lista ao final).
+- *Escopo.* Pipeline aberto e reproduzível (Overture/IPPUC → SUMO → calibração GEH → emissões, poeira, ruído e fila) e intervenções de controle semafórico avaliadas com 5 sementes por janela, mais uma varredura de demanda (50% a 100%).
+- *PI sobre programas fixos:* velocidade média #dp("am", "tobe_pi", "speed_kmh")% na manhã e #dp("pm", "tobe_pi", "speed_kmh")% na tarde (_p_ = #pp("am", "tobe_pi", "speed_kmh") e #pp("pm", "tobe_pi", "speed_kmh")), CO₂ por veículo-km #dp("am", "tobe_pi", "CO2_g_per_vkm")% e #dp("pm", "tobe_pi", "CO2_g_per_vkm")%, e #dp("am", "tobe_pi", "teleports")% de _teleports_ na manhã. É a única intervenção com efeito robusto, e é negativo.
+- *Prioridade ao ônibus (regra refeita: um pedido por ônibus e semáforo, só ônibus em movimento):* velocidade #dp("am", "tobe", "speed_kmh")% e #dp("pm", "tobe", "speed_kmh")% (_p_ = #pp("am", "tobe", "speed_kmh") e #pp("pm", "tobe", "speed_kmh")): *efeito estatisticamente nulo*. A ablação com ônibus falsos dá resultado do mesmo tipo (#dp("am", "tobe_fake", "speed_kmh")% na manhã), logo nada indica que a detecção de ônibus seja o mecanismo.
+- *Onda verde adaptativa (Rua Mariano Torres):* a fila p95 cai #dp("am", "tobe_gw", "q_p95_m")% e os _teleports_ #dp("am", "tobe_gw", "teleports")% na manhã, mas a *velocidade no eixo cai #dp("am", "tobe_gw", "corridor_speed_kmh")%* e o ruído harmonoise sobe #sg(D("am", "tobe_gw", "Leq_harm_dba").delta_mean, d: 1) dB. Resultado misto; a implementação não entregou a progressão esperada.
+- *Por que confiar pouco.* Demanda, semáforos, linhas de ônibus e perfil horário são provisórios; a calibração GEH não atingiu 85%; os _teleports_ se concentram em poucas arestas (#TP.distinct_edges arestas, #f0(100 * TP.top10_share)% nas dez piores, oito na Rua Conselheiro Laurindo); e o resultado depende do nível de demanda (ver a varredura).
+- *Não feito.* Medição de campo, linhas reais da URBS, semáforos reais, pedestres no controle, CO₂e e CO₂ biogênico.
+
+= O que mudou em relação à versão anterior deste relatório
+
+Uma versão anterior concluía que a prioridade ao ônibus *piorava* a rede (velocidade −11% a −17%). Aquele resultado vinha de duas fontes que esta versão corrige. (1) A regra antiga encerrava o verde repetidamente para o mesmo ônibus, inclusive ônibus parado em ponto, e
+avançava o ciclo sem verificar se a próxima fase serve o ônibus; a regra refeita faz um pedido por ônibus e semáforo, ignora ônibus parados e tem uma variante condicional. (2) A contabilidade mudou: totais, velocidade e ruído usam agora só a hora de demanda (0–3600 s), e não a simulação inteira de 5400 s,
+e o fator $k$ não multiplica mais o escoamento. Por isso o As-Is aparece aqui com velocidade média de cerca de #f1(D("am", "asis", "speed_kmh").mean) km/h e não mais 10,6 km/h. A lição é que a conclusão "intervenção piora a rede" dependia do detalhe da regra, o que reforça que os resultados de controle desta rede saturada têm baixa resolução.
+O PI sobre programas fixos continua pior em todas as versões.
 
 = Desenho do experimento
 
-Três cenários (mais a ablação), mesma rede, mesmas rotas e mesmas cinco sementes (pareamento por semente), simulados por 5400 s (1 h de demanda mais 30 min de escoamento) nas duas janelas de pico:
-*As-Is*, programas _actuated_ do `netconvert`, o mesmo do M2; *To-Be PI*, o controlador PI do M3 sobre programas fixos (parâmetros: amostragem de 10 s, os demais padrão);
-*To-Be*, o _actuated_ original com prioridade ao ônibus sobreposta; e uma *ablação*, a mesma regra aplicada a 1 em cada 30 veículos que não são ônibus, para testar se algum efeito vem da detecção de ônibus ou só do encerramento forçado de verdes. Os dois To-Be foram escolhidos na sintonia do M3 (uma semente à parte, 11), de modo que a avaliação aqui usa sementes independentes. As emissões usam as classes HBEFA3 do SUMO;
-o ruído, o CoRTN a 10 m com velocidade de piso 20 km/h. Estimativas por média e intervalo de confiança de 95% (_t_ de Student, 4 graus de liberdade); a diferença para o As-Is é pareada por semente.
+Mesma rede, mesmas rotas e mesmas cinco sementes (pareamento por semente), 5400 s por rodada (1 h de demanda mais 30 min de escoamento), nas duas janelas de pico. Cenários: *As-Is*, programas _actuated_ do `netconvert` (o do M2); *PI sobre fixos*, o controlador PI do M3 (amostragem de 10 s) sobre programas fixos;
+*Actuated + ônibus*, prioridade ao ônibus sobreposta ao _actuated_; *Ablação*, a mesma regra aplicada a 1 em cada 30 veículos que não são ônibus (o contador também sorteia ônibus, uma imprecisão pequena), para testar o mecanismo; *Prioridade condicional*, que só encerra o verde se a próxima fase serve o ônibus;
+*Onda verde*, ciclo comum e defasagens adaptativas na Rua Mariano Torres. Os parâmetros do PI e das regras foram escolhidos na sintonia do M3 (semente 11, fora das réplicas). Métricas: velocidade média espacial e veículos-km (do `edgeData` de 0–3600 s), veículos concluídos, _teleports_, fila (`queue-output`, percentil 95 ponderado por amostras),
+atraso dos concluídos, emissões HBEFA, ruído (CoRTN com vazão horária e piso de 20 km/h, e harmonoise do SUMO; aproximações somadas e pontos combinados por média energética de dB) e velocidade no eixo da onda verde. Médias com IC de 95% (_t_, 4 g.l.); diferenças pareadas por semente.
 
-= Resultado principal
+= Resultados
 
-Com cinco sementes por janela, *as duas intervenções pioraram as métricas de rede* neste modelo. O PI sobre programas fixos reduz a velocidade média espacial em cerca de 24% (manhã) e 30% (tarde) e eleva o CO₂ em 19% e 25%, com significância razoável (_p_ ≤ 0,025).
-A prioridade ao ônibus sobre o _actuated_ reduz a velocidade em 11% (manhã, _p_ = 0,07) e 17% (tarde, _p_ = 0,02) e conclui menos viagens (−5% e −10%); o CO₂ sobe 5% (manhã, _p_ = 0,16, não significativo) e 10% (tarde, _p_ = 0,05). Os _teleports_ crescem de 38% a 68%, conforme o cenário e a janela.
-O atraso médio dos ônibus que concluem a viagem cai cerca de 19% e 18%, e na tarde o atraso médio dos concluídos cai 16%, mas ambos têm viés de sobrevivência: os cenários concluem menos viagens. A ablação, que aplica a mesma regra a 1 em cada 30 veículos que não são ônibus,
-produz queda de atraso de ônibus igual ou maior (−25% e −24%) e velocidade e CO₂ semelhantes à do To-Be: a queda de atraso *não se deve à detecção de ônibus*, e sim ao encerramento forçado de verdes, e a regra não distingue o veículo que a aciona.
-
-*O que isso não diz.* (1) A conclusão vale para *estas implementações neste modelo*, e não para controle adaptativo ou prioridade ao ônibus em geral. Em `tobe.py` a prioridade ao ônibus encerra o verde atual avançando o ciclo, o que pode não servir a fase do ônibus e pode truncar verdes repetidamente; ela se aplica a todos os 223 semáforos e a todas as aproximações, e não a corredores exclusivos como as canaletas de Curitiba;
-a ablação mostra, portanto, que a *atuação* é pouco seletiva, e não que prioridade ao ônibus bem projetada falharia. (2) O As-Is está em saturação instável: a mesma regra de prioridade deu +14% de velocidade na semente de sintonia e −11% a −17% nas cinco réplicas, uma oscilação de cerca de 25 pontos que mede a sensibilidade do modelo; comparar controladores dentro de uma rede em engarrafamento tem pouca resolução.
-(3) Teleports e veículos retidos entram nas métricas de formas diferentes entre cenários, e o corte em 5400 s deixa de fora as emissões futuras dos veículos ainda na rede, o que favorece o cenário que retém mais.
-
-= Resultados de tráfego, emissões e ruído
-
-#let tbl(w, title) = figure(
-  table(columns: (4.3cm, 2.4cm, 2.4cm, 1.5cm, 1.3cm, 1.5cm, 1.6cm), align: (left, right, right, right, right, right, right), inset: (x: 4pt, y: 4pt),
-    [Indicador], [As-Is], [To-Be], [Δ To-Be], [_p_], [Δ PI fixo], [Δ ônibus falsos],
-    ..rows(w)),
-  caption: [#title: média ± IC 95% (5 réplicas). To-Be = _actuated_ + prioridade ao ônibus. Δ é a diferença média pareada em % da média do As-Is; _p_ é do teste _t_ pareado do To-Be; "PI fixo" é o PI sobre programas fixos; "ônibus falsos" é a ablação. Dados #ph(body: [provisórios]).],
-)
 #tbl("am", [Pico da manhã])
 #tbl("pm", [Pico da tarde])
 
-#figure(image("figures/m4_trafego.png", width: 100%), caption: [Atraso, velocidade média e atraso dos ônibus por cenário (barras de erro: IC 95%).]) <fig-traf>
+#figure(image("figures/m4_trafego.png", width: 100%), caption: [Velocidade média, fila p95 e _teleports_ (barras de erro: IC 95%).]) <fig-traf>
 #figure(image("figures/m4_emis.png", width: 100%), caption: [CO₂ e NOx na janela e CO₂ por veículo-km (barras de erro: IC 95%).]) <fig-emis4>
-#figure(image("figures/m4_ruido.png", width: 100%), caption: [Leq médio estimado nos pontos monitorados.]) <fig-ruido4>
+#figure(image("figures/m4_ruido.png", width: 100%), caption: [Leq estimado por CoRTN (vazão horária, piso de 20 km/h) e por harmonoise, em P01 e P04.]) <fig-ruido4>
 
 == Como ler
 
-- *Estatística.* Foram feitos #EX.n_tests testes _t_ pareados com 5 pares cada, sem correção para múltiplas comparações e sem checagem de normalidade (com cinco pares, o teste de Wilcoxon não passa de _p_ = 0,0625); os valores _p_ são descritivos, não confirmatórios, e as conclusões se apoiam nos casos em que vários indicadores concordam. O valor _p_ da tabela é de um teste _t_ pareado com 5 pares; ele ignora que a incerteza dominante não é a semente de simulação e sim a demanda sorteada, os semáforos inferidos e as rotas de ônibus aleatórias. Um _p_ baixo diz que a diferença é estável ao trocar a semente, não que se repetirá na cidade.
-- *Emissões.* Os percentuais seguem os de velocidade e de viagens concluídas, porque as classes HBEFA3 respondem à cinemática: o To-Be emite mais CO₂ na janela porque a rede fica mais lenta e retém veículos que continuam emitindo. A tabela traz CO₂ por veículo-km além do total para separar _fluxo_ de _intensidade_.
-- *Magnitude das emissões.* Os valores absolutos de CO₂ (cerca de 950 a 1.400 g/km) e de CO (cerca de 30 g/km) são várias vezes os típicos da literatura para frotas leves, porque o modelo está engarrafado, as motos usam a classe de carros e os fatores são europeus. Servem para comparar cenários, não para citar. O fator $k$ de extensão à janela multiplica uma simulação que já inclui 30 min de escoamento.
-- *Atraso dos concluídos e ônibus.* Os cenários concluem números diferentes de viagens (2.500 a 2.900), então o atraso médio dos concluídos tem viés de sobrevivência; a velocidade espacial e os concluídos são mais confiáveis.
-- *Ruído.* O CoRTN, com piso de velocidade de 20 km/h, só capta a mudança de volume nas aproximações, não o fim do para-e-anda. As diferenças de Leq são pequenas por construção e não sustentam conclusão sobre mitigação acústica; isso exige modelo de fonte que cubra baixas velocidades e medição em campo (M1).
-- *Poeira.* A ressuspensão (AP-42, parâmetros assumidos) é proporcional aos veículos-km: MP2,5 de #fix(EX.dust.am.asis.pm25_kg, 2) kg (As-Is) contra #fix(EX.dust.am.tobe.pm25_kg, 2) kg (To-Be) na manhã, e #fix(EX.dust.pm.asis.pm25_kg, 2) contra #fix(EX.dust.pm.tobe.pm25_kg, 2) kg na tarde. A queda de poeira nas intervenções é *artefato de congestionamento*: com menos veículos-km percorridos (a rede anda menos), há menos ressuspensão; não é benefício.
-- *Fila e acústica não calculadas.* O comprimento de fila exigido pelo manual não foi extraído (exigiria saída `queue-output` ou detectores por aresta) e *não há simulação acústica*: o ruído é o CoRTN em 2 pontos (P01 e P04) com piso de 20 km/h, enquanto a rede anda a 8 a 11 km/h, de modo que ele só reflete a vazão; o "Leq médio" é a média aritmética de dois níveis em dB, e a vazão horária usa o `entered` de 5400 s, aproximação grosseira. O `harmonoise` do SUMO é a melhora natural.
+- *Estatística.* Foram feitos #EX.n_tests testes _t_ pareados com 5 pares, sem correção para múltiplas comparações e sem checagem de normalidade (com cinco pares, o teste de Wilcoxon não passa de _p_ = 0,0625). Os valores _p_ são descritivos; as conclusões apoiam-se em vários indicadores concordantes.
+- *Fila.* O PI reduz a fila p95 (#dp("am", "tobe_pi", "q_p95_m")%) *e* reduz a vazão (#dp("am", "tobe_pi", "finished")% de concluídos): fila menor com menos veículos servidos não é melhora. A onda verde reduz a fila e os _teleports_ sem perder viagens concluídas (#dp("am", "tobe_gw", "finished")%), mas a velocidade no eixo cai.
+- *Emissões.* Seguem a velocidade e a vazão (HBEFA responde à cinemática). Os valores absolutos de CO₂ (cerca de 700 a 900 g/km) e de CO são várias vezes os típicos da literatura para frotas leves porque a rede está engarrafada e os fatores são europeus; servem para comparar cenários, não para citar. Atraso dos concluídos e dos ônibus têm viés de sobrevivência.
+- *Ruído.* O CoRTN com piso de velocidade só enxerga a vazão e praticamente não muda entre cenários. O harmonoise, que cobre baixas velocidades, sobe com a onda verde (#sg(D("am", "tobe_gw", "Leq_harm_dba").delta_mean, d: 1) dB), compatível com mais aceleração e frenagem no eixo. É um nível por aresta, sem propagação a receptores; não é uma simulação acústica completa, e não há medição de campo para validar.
+- *Poeira.* A ressuspensão (AP-42, premissas assumidas) é proporcional aos veículos-km e acompanha a vazão; uma queda nela significa menos veículos-km percorridos, não benefício.
+
+= Varredura de demanda
+
+O As-Is é saturado e instável com 100% da demanda. Para dar resolução à comparação, o As-Is e as duas versões da prioridade ao ônibus foram simulados com 50%, 70% e 85% da demanda (3 sementes cada; o ponto de 100% usa as mesmas 3 sementes das réplicas principais).
+
+#figure(
+  table(columns: (auto, auto, auto, auto, auto), align: (left, right, right, right, right),
+    [Demanda], [Velocidade As-Is (km/h)], [Velocidade To-Be (km/h)], [_Teleports_ As-Is], [_Teleports_ To-Be],
+    ..("0.5", "0.7", "0.85", "1.0").map(k => ([#fix(float(k) * 100, 0)%], pm(SW.at(k).asis.speed_kmh), pm(SW.at(k).tobe.speed_kmh), pm(SW.at(k).asis.teleports, d: 0), pm(SW.at(k).tobe.teleports, d: 0))).flatten()),
+  caption: [Varredura de demanda (manhã, média ± IC 95%, 3 sementes). To-Be = _actuated_ + prioridade ao ônibus.],
+)
+#figure(image("figures/m4_sweep.png", width: 100%), caption: [Velocidade, _teleports_ e fila p95 por nível de demanda (IC 95%, 3 sementes).]) <fig-sweep>
+
+Com 50% da demanda a rede flui (cerca de 35 km/h, nenhum _teleport_) e As-Is e To-Be são indistinguíveis: a prioridade ao ônibus não tem efeito mensurável. Entre 70% e 100% a rede entra num regime instável em que as sementes divergem (os IC chegam a ±17 km/h com 3 sementes): algumas rodadas travam e outras não, de modo que *a comparação não tem resolução*,
+mesmo quando a média do To-Be parece melhor (como em 70%). Dizer que a prioridade ao ônibus "ajuda" ou "atrapalha" nessa faixa seria superinterpretar o ruído. A versão condicional coincide com a básica em dois dos três níveis, indicando que sua condição quase nunca restringiu a decisão.
+
+= Diagnóstico de congestionamento
+
+Uma rodada do As-Is com avisos ligados registrou #TP.total _teleports_ (#f0(TP.by_reason.jam) por congestionamento, #f0(TP.by_reason.yield) por _yield_ e #f0(TP.by_reason.at("wrong lane")) por faixa errada), concentrados em #TP.distinct_edges arestas; #f0(100 * TP.top10_share)% ocorrem nas dez piores,
+das quais oito na Rua Conselheiro Laurindo (duas faixas, com vários semáforos inferidos), e as demais na Rua Brasílio Itiberê e na Rua Chile. O engarrafamento do As-Is é, portanto, um defeito *localizado* da rede e da demanda sorteada, não sobrecarga uniforme. Corrigir esses eixos com dados reais (contagens, fases) é o passo que mais ganharia resolução.
 
 = Modos ativos
 
-A comparação usa redes que incluem pedestres, ciclovias e as faixas exclusivas de bicicleta propostas, com demanda de pedestres e ciclistas #ph(body: [provisória]) e três réplicas. Três cenários separam os efeitos:
-*As-Is ativo* (pedestres e ciclovias, _actuated_ padrão), *só faixas de bicicleta* (rede com as faixas, _actuated_ padrão) e *To-Be ativo* (faixas mais prioridade ao ônibus).
+A comparação usa redes com pedestres, ciclovias e as faixas exclusivas de bicicleta propostas, com demanda de pedestres e ciclistas #ph(body: [provisória]) e três réplicas. Três cenários separam os efeitos: *As-Is ativo* (_actuated_ padrão), *só faixas de bicicleta* e *To-Be ativo* (faixas mais prioridade ao ônibus).
 
 #figure(
   table(columns: (1fr, auto, auto, auto), align: (left, right, right, right),
@@ -118,32 +126,33 @@ A comparação usa redes que incluem pedestres, ciclovias e as faixas exclusivas
     [Ciclistas concluídos], [#pm(AC.asis_act.bikes, d: 0)], [#pm(AC.bike_only.bikes, d: 0)], [#pm(AC.tobe_act.bikes, d: 0)],
     [Velocidade média dos ciclistas (km/h)], [#pm(AC.asis_act.bike_speed_kmh)], [#pm(AC.bike_only.bike_speed_kmh)], [#pm(AC.tobe_act.bike_speed_kmh)],
     [Perda de tempo média dos ciclistas (s)], [#pm(AC.asis_act.bike_delay_s, d: 0)], [#pm(AC.bike_only.bike_delay_s, d: 0)], [#pm(AC.tobe_act.bike_delay_s, d: 0)]),
-  caption: [Modos ativos (manhã, 3 réplicas, média ± IC 95%). Demanda #ph(body: [provisória]). Rotas inválidas em uma variante são descartadas pelo SUMO, então o número de ciclistas e carros concluídos pode diferir.],
+  caption: [Modos ativos (manhã, 3 réplicas, média ± IC 95%). Demanda #ph(body: [provisória]). Rotas inválidas em uma variante são descartadas pelo SUMO.],
 )
 
-*Resultado:* não há efeito mensurável das faixas de bicicleta nem do controle sobre pedestres e ciclistas (médias praticamente iguais), e há indício de custo para os veículos motorizados. Isso era esperado: as rotas dos ciclistas são pré-calculadas e não desviam para as novas faixas, os pedestres usam calçadas e travessias do modelo padrão, e o controlador não vê pedestres. O atraso dos veículos motorizados é maior nas redes com faixas (cerca de 655 e 685 s contra 577 s): o teste pareado (n = 3, sem correção) dá +#fix(EX.active_paired.bike_only_vs_asis_car_delay.diff, 0) s para só faixas (_p_ = #fix(EX.active_paired.bike_only_vs_asis_car_delay.p, 3)), compatível com o custo das faixas para os veículos, mas a rede com faixas tem mais semáforos inferidos (256 contra 233), o que confunde o efeito. O As-Is ativo é uma rede diferente da do As-Is principal (233 contra 223 semáforos; atraso de 577 s contra 471 s), então os dois não são comparáveis entre si. O experimento *não permite concluir* sobre faixas de bicicleta; só mostra que o modelo roda e quais mudanças de modelagem são necessárias (escolha de rota de ciclistas, pedestres no controle, calçadas ao longo das vias).
+*Resultado:* sem efeito mensurável das faixas de bicicleta nem do controle sobre pedestres e ciclistas (médias praticamente iguais), com possível custo para os veículos motorizados: o teste pareado (n = 3, sem correção) dá +#fix(EX.active_paired.bike_only_vs_asis_car_delay.diff, 0) s de atraso para só faixas (_p_ = #fix(EX.active_paired.bike_only_vs_asis_car_delay.p, 3)),
+mas a rede com faixas tem mais semáforos inferidos (256 contra 233), o que confunde o efeito, e o As-Is ativo é outra rede que o As-Is principal. Era esperado: as rotas dos ciclistas são pré-calculadas e não desviam para as novas faixas, os pedestres usam calçadas e travessias do modelo padrão e o controlador não vê pedestres. O experimento não permite concluir sobre faixas de bicicleta.
 
 = Viabilidade para Curitiba e limites
 
 #table(columns: (auto, 1fr), [Aspecto], [Avaliação],
-  [Prioridade ao ônibus], [Tecnicamente simples (detecção por GPS/transponder da URBS e comando de fase), mas *não melhorou* a rede nesta implementação e com rotas de ônibus aleatórias; só vale reavaliar com as linhas reais.],
-  [Controlador PI], [Piorou a rede e não se justifica implantar. Exigiria sintonia com dados reais, semáforos reais, coordenação por eixo (onda verde, não implementada) e modelagem de pedestres.],
-  [Faixas de bicicleta], [Proposta de desenho sem estudo de largura de via, estacionamento, desapropriação, custo e segurança; é hipótese a ser avaliada, não recomendação.],
+  [Controlador PI], [Piorou a rede em todas as versões; não se justifica implantar. Exigiria sintonia com dados reais, semáforos reais, sensores reais (não idealizados) e modelagem de pedestres.],
+  [Prioridade ao ônibus], [Tecnicamente simples (detecção por GPS/transponder da URBS e comando de fase), mas *sem efeito mensurável* nesta rede e com rotas de ônibus aleatórias; só vale reavaliar com as linhas reais e corredores exclusivos.],
+  [Onda verde], [Reduziu fila e _teleports_ mas reduziu a velocidade no eixo e elevou o ruído harmonoise; implementação sobre semáforos inferidos e um só sentido. Exige fases reais e coordenação bidirecional.],
+  [Faixas de bicicleta], [Desenho sem estudo de largura de via, estacionamento, desapropriação, custo e segurança; hipótese, não recomendação.],
   [Comunicação e sensoriamento], [Latência e tráfego de mensagens são desprezíveis frente ao período de 5 s, em localhost. Falta teste em rede real e custo de instalação e manutenção.],
-  [Evidência], [Todas as entradas quantitativas são provisórias. O resultado vale como teste de método e não como estimativa de benefício.],
+  [Evidência], [Todas as entradas quantitativas são provisórias e a rede opera em regime instável acima de ~50% da demanda. O resultado vale como teste de método e não como estimativa de benefício.],
 )
 
-*Para que o relatório final tenha valor de engenharia faltam:* (1) contagens de veículos, pedestres e ciclistas, e medições de Leq; (2) fases e localização dos semáforos; (3) itinerários e telemetria reais da URBS; (4) calibração com tempos de viagem; (5) fatores de emissão e frota locais; (6) revisão do polígono de estudo.
+*Para que o relatório final tenha valor de engenharia faltam:* (1) contagens de veículos, pedestres e ciclistas e medições de Leq; (2) fases e localização dos semáforos (e a Av. Floriano, que ficou sem semáforos na inferência); (3) itinerários e telemetria reais da URBS; (4) calibração com tempos de viagem e filas; (5) fatores de emissão e frota locais, CO₂e e CO₂ biogênico; (6) correção dos gargalos localizados do As-Is e revisão do polígono de estudo.
 
 = Perguntas esperadas da banca
 
 #table(columns: (1fr, 2fr), [Pergunta], [Resposta honesta],
-  [As intervenções reduziram as emissões?], [Não neste modelo: as duas aumentaram o CO₂ e reduziram a velocidade média. Não afirmamos benefício.],
+  [As intervenções reduziram as emissões?], [Não. O PI as aumentou de forma robusta; prioridade ao ônibus e onda verde não mostraram redução consistente. Não afirmamos benefício.],
+  [Por que o resultado mudou entre versões?], [A regra de prioridade ao ônibus foi refeita (um pedido por ônibus e semáforo) e a contabilidade corrigida (1 h de demanda). Mostra que as conclusões em rede saturada dependem de detalhes de implementação, e é por isso que há réplicas, ablação e varredura.],
   [O modelo está calibrado?], [O procedimento GEH foi executado, mas o critério de 85% não foi atingido (manhã 76,5%, tarde 82,4%), sobre contagens sorteadas e só dois pontos com aproximação motorizada.],
-  [Por que não há dados de campo?], [Não houve coleta nesta etapa; todos os insumos quantitativos estão marcados como provisórios e são substituíveis por `make calibrate`.],
-  [Por que o PI foi pior que o _actuated_?], [Provável combinação de: perda da lógica por detectores ao converter para programas fixos, sensores idealizados, erro de fila sem normalização e rede saturada. Não provamos qual fator domina.],
-  [E a onda verde?], [Não foi implementada; é a principal lacuna de controle frente ao manual.],
-  [Qual é a contribuição?], [Um pipeline aberto e reproduzível, um teste de método com réplicas, ablação e relato do resultado negativo, e uma lista objetiva do que falta medir.],
+  [Por que o PI foi pior que o _actuated_?], [Provável combinação de perda da lógica por detectores ao converter para programas fixos, sensores idealizados, erro de fila sem normalização e rede saturada; não isolamos qual domina.],
+  [Qual é a contribuição?], [Um pipeline aberto e reproduzível, um teste de método com réplicas, ablação, varredura de demanda e diagnóstico de gargalos, relato do resultado negativo e uma lista objetiva do que falta medir.],
 )
 
 #bibliography("refs.bib", style: "associacao-brasileira-de-normas-tecnicas", title: [Referências])

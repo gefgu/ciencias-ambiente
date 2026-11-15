@@ -73,6 +73,7 @@
   show figure.where(kind: table): set figure.caption(position: top)
   show figure.where(kind: table): set block(breakable: true)
   show table: set text(size: 8.5pt)
+  show table: set par(justify: false)
   set table(
     stroke: (x, y) => (bottom: if y == 0 { 0.8pt + teal } else { 0.4pt + rule }),
     inset: (x: 6pt, y: 5pt), fill: (x, y) => if y == 0 { teal.lighten(90%) },

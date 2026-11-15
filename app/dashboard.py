@@ -82,7 +82,8 @@ kpi(c[2], f"{s['ciclo_km']:.0f} km", "Ciclovias oficiais (IPPUC)")
 kpi(c[3], f"{s['n_points']}", "Pontos de medição candidatos")
 st.write("")
 
-tab_map, tab_traf, tab_env, tab_arch = st.tabs(["🗺️ Mapa", "🚗 Tráfego", "🔊 Ruído e emissões", "🧩 Arquitetura e roadmap"])
+tab_map, tab_traf, tab_env, tab_arch, tab_m2, tab_m3, tab_m4 = st.tabs(["🗺️ Mapa", "🚗 Tráfego", "🔊 Ruído e emissões", "🧩 Arquitetura e roadmap",
+                                                                              "🧪 M2 Calibração", "🎛️ M3 Controle", "⚖️ M4 As-Is × To-Be"])
 
 # ---------- MAPA ----------
 with tab_map:
@@ -198,3 +199,109 @@ with tab_arch:
                                       "Controle TraCI, MQTT, esquemáticos de sensoriamento", "Comparação As-Is × To-Be, viabilidade, defesa"],
                        "Status": ["▶ em andamento", "○", "○", "○"]})
     st.dataframe(rm, hide_index=True, width="stretch")
+
+
+# ---------- M2–M4 (lê data/processed; tolera arquivos ausentes) ----------
+PROC = Path(__file__).resolve().parents[1] / "data" / "processed"
+
+
+def jload(name):
+    try:
+        return json.loads((PROC / name).read_text())
+    except Exception:
+        return None
+
+
+def cload(name):
+    try:
+        return pd.read_csv(PROC / name)
+    except Exception:
+        return None
+
+
+SCEN_LABEL = {"asis": "As-Is (actuated)", "tobe_pi": "PI sobre fixos", "tobe": "Actuated + prioridade ônibus", "tobe_fake": "Ablação (ônibus falsos)",
+              "tobe_bus2": "Prioridade condicional", "tobe_gw": "Onda verde (Mariano Torres)"}
+SCEN_COLOR = {"asis": T.MUTED, "tobe_pi": T.AMBER, "tobe": T.TEAL, "tobe_fake": T.PURPLE, "tobe_bus2": T.BLUE, "tobe_gw": T.GREEN}
+METRIC_LABEL = {"speed_kmh": "Velocidade média (km/h)", "delay_s": "Atraso dos concluídos (s)", "finished": "Veículos concluídos", "teleports": "Teleports",
+                "q_p95_m": "Fila p95 (m)", "bus_delay_s": "Atraso dos ônibus (s)", "CO2_t_window": "CO₂ na janela (t)", "CO2_g_per_vkm": "CO₂ por veículo-km (g)",
+                "NOx_kg_window": "NOx na janela (kg)", "Leq_harm_dba": "Leq harmonoise (dB)", "Leq_cortn_dba": "Leq CoRTN (dB)", "corridor_speed_kmh": "Velocidade no eixo (km/h)"}
+
+with tab_m2:
+    st.markdown('<span class="ph">PLACEHOLDER</span> contagens observadas sorteadas: o resultado testa o <b>procedimento</b>, não o modelo.', unsafe_allow_html=True)
+    cols = st.columns(2)
+    for col, w, lbl in zip(cols, ("am", "pm"), ("Manhã", "Tarde")):
+        g, cal = cload(f"m2_geh_{w}.csv"), jload(f"m2_calibration_{w}.json")
+        if g is None or cal is None:
+            col.info("Execute `make calibrate`.")
+            continue
+        with col:
+            st.metric(f"{lbl}: GEH < 5", f"{cal['final_pct_geh_lt5']:.1f}%", "critério 85%: " + ("atendido" if cal["ok"] else "NÃO atendido"), delta_color="off")
+            fig = go.Figure(go.Scatter(x=g.obs_vph, y=g.sim_vph, mode="markers", marker=dict(color=[T.TEAL if v < 5 else T.RED for v in g.geh], size=9), text=g.edge))
+            mx = float(max(g.obs_vph.max(), g.sim_vph.max())) * 1.05
+            fig.add_scatter(x=[0, mx], y=[0, mx], mode="lines", line=dict(color=T.MUTED, dash="dot"), showlegend=False)
+            fig.update_layout(title=f"{lbl}: simulado × observado (veíc/h)", xaxis_title="observado (provisório)", yaxis_title="simulado")
+            st.plotly_chart(style(fig, 320), width="stretch")
+            st.caption(f"Ponderado por volume: {cal['weighted_pct_geh_lt5']:.1f}%; simulado ÷ observado = {cal['sim_over_obs_total']:.2f}; {cal['n_points']} pontos.")
+    b = jload("m2_baseline.json")
+    if b:
+        st.subheader("Linha de base As-Is")
+        rows = [("Carregados / inseridos / concluídos", lambda x: f"{x['loaded']} / {x['inserted']} / {x['finished']}"), ("Velocidade média (km/h)", lambda x: f"{x['mean_speed_kmh']:.1f}"),
+                ("Teleports", lambda x: x["teleports"]), ("CO₂ na janela (t)", lambda x: f"{x['window_kg']['CO2'] / 1000:.1f}"), ("CO₂ por veículo-km (g)", lambda x: f"{x['g_per_vkm']['CO2']:.0f}"),
+                ("MP2,5 ressuspensão (kg)", lambda x: f"{x['resuspension_window_kg']['PM25']:.2f}")]
+        if "queue_p95_m" in next(iter(b.values())):
+            rows.append(("Fila p95 (m)", lambda x: f"{x['queue_p95_m']:.0f}"))
+        st.dataframe(pd.DataFrame({"Indicador": [r[0] for r in rows], **{v["label"]: [str(r[1](v)) for r in rows] for v in b.values()}}), hide_index=True, width="stretch")
+        st.warning("Rede saturada: valores absolutos descrevem uma rede travada e não são um inventário.")
+
+with tab_m3:
+    tu, mq = cload("m3_tuning.csv"), jload("m3_mqtt.json")
+    if tu is not None:
+        col = tu.desc if "desc" in tu else tu.name
+        fig = go.Figure(go.Bar(y=col, x=tu.speed_kmh, orientation="h", marker_color=[T.MUTED if n == "asis" else T.TEAL for n in tu.name]))
+        fig.update_layout(title="Sintonia (uma semente): velocidade média espacial (km/h)", yaxis=dict(autorange="reversed"))
+        st.plotly_chart(style(fig, 420), width="stretch")
+        st.caption("O As-Is (actuated) lidera; nenhuma variante do PI o supera. Uma semente: não generalizar.")
+    if mq:
+        c = st.columns(4)
+        kpi(c[0], f"{mq['msgs_published']}", "Mensagens MQTT")
+        kpi(c[1], f"{mq['latency_ms_median']:.1f} ms", "Latência mediana (localhost)")
+        kpi(c[2], f"{mq['latency_ms_p95']:.1f} ms", "Latência p95")
+        kpi(c[3], f"{mq.get('timeouts', 0)}", "Timeouts")
+    st.info("Onda verde adaptativa implementada em `src/cps/greenwave.py` (ciclo comum e defasagens reajustadas pela velocidade de progressão); resultados na aba M4.")
+
+with tab_m4:
+    st.markdown('<span class="ph">PLACEHOLDER</span> demanda e semáforos provisórios. <b>Resultado negativo:</b> as intervenções não melhoraram o As-Is neste modelo.', unsafe_allow_html=True)
+    R, runs = jload("m4_results.json"), cload("m4_runs.csv")
+    if not R or runs is None:
+        st.info("Execute `make evaluate`.")
+    else:
+        c1, c2 = st.columns(2)
+        w4 = c1.radio("Janela", ["am", "pm"], horizontal=True, format_func=lambda x: "Manhã" if x == "am" else "Tarde", key="w4")
+        avail = [m for m in METRIC_LABEL if m in next(iter(R[w4].values()))]
+        met = c2.selectbox("Métrica", avail, format_func=lambda m: METRIC_LABEL[m])
+        sc = [s for s in SCEN_LABEL if s in R[w4]]
+        fig = go.Figure()
+        fig.add_bar(x=[SCEN_LABEL[s] for s in sc], y=[R[w4][s][met]["mean"] for s in sc], error_y=dict(type="data", array=[R[w4][s][met]["ci95"] or 0 for s in sc]),
+                    marker_color=[SCEN_COLOR[s] for s in sc], name="média ± IC 95%")
+        sub = runs[runs.window == w4]
+        fig.add_scatter(x=[SCEN_LABEL[s] for s in sub.scenario], y=sub[met], mode="markers", marker=dict(color=T.INK, size=6, opacity=.55), name="réplicas (sementes)")
+        fig.update_layout(title=f"{METRIC_LABEL[met]} — {len(runs[runs.window == w4].seed.unique())} sementes por cenário")
+        st.plotly_chart(style(fig, 380), width="stretch")
+        d = [(SCEN_LABEL[s], R[w4][s][met].get("delta_pct"), R[w4][s][met].get("p_paired")) for s in sc if s != "asis"]
+        st.dataframe(pd.DataFrame(d, columns=["Cenário", "Δ vs As-Is (%)", "p pareado (descritivo, n=5)"]).round(3), hide_index=True, width="stretch")
+        SW = jload("m4_sweep.json")
+        if SW:
+            st.subheader("Varredura de demanda (manhã)")
+            smet = st.selectbox("Métrica da varredura", [m for m in ("speed_kmh", "delay_s", "teleports", "q_p95_m", "CO2_g_per_vkm") if m in next(iter(next(iter(SW.values())).values()))],
+                                format_func=lambda m: METRIC_LABEL[m], key="smet")
+            fig = go.Figure()
+            for s in ("asis", "tobe", "tobe_bus2"):
+                ks = sorted((k for k in SW if s in SW[k]), key=float)
+                fig.add_scatter(x=[float(k) for k in ks], y=[SW[k][s][smet]["mean"] for k in ks], mode="lines+markers", name=SCEN_LABEL[s], line=dict(color=SCEN_COLOR[s]))
+            fig.update_layout(xaxis_title="fator de demanda", yaxis_title=METRIC_LABEL[smet])
+            st.plotly_chart(style(fig, 340), width="stretch")
+            st.caption("Com a demanda reduzida o As-Is sai da saturação: a comparação ganha resolução.")
+        A = jload("m4_active.json")
+        if A:
+            with st.expander("Modos ativos (3 réplicas)"):
+                st.dataframe(pd.DataFrame({k: {m: f"{v['mean']:.1f} ± {v['ci95']:.1f}" if v["ci95"] is not None else f"{v['mean']:.1f}" for m, v in d.items()} for k, d in A.items()}), width="stretch")

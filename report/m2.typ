@@ -4,6 +4,7 @@
 #let CA = json("figures/m2_calibration_am.json")
 #let CP = json("figures/m2_calibration_pm.json")
 #let NS = json("figures/m2_net_stats.json")
+#let TP = json("figures/m4_teleports.json")
 #let fix(x, d) = {
   if d == 0 { return str(int(calc.round(float(x)))) }
   let s = str(calc.round(float(x), digits: d))
@@ -55,7 +56,7 @@ Resultado: #N.at(0) arestas, #N.at(1) nós e *#N.at(2) semáforos*.
 
 Não há matriz origem-destino. A demanda vem de (i) rotas candidatas (viagens aleatórias entre arestas periféricas, mais viagens forçadas a passar por cada aresta monitorada) e (ii) a ferramenta `routeSampler`,
 que escolhe o subconjunto de rotas que melhor reproduz as contagens. Os veículos são sorteados na frota de classes HBEFA3 embutidas no SUMO: carro a gasolina/flex, carro a diesel, "moto", ônibus e caminhão.
-A build usada não tem classe de motocicleta; as motos usam a de carro a gasolina, o que superestima o CO₂ e provavelmente subestima CO e HC. *Os ônibus seguem rotas aleatórias*, sem as linhas da URBS, portanto
+As motos usam a classe HBEFA4 de motocicleta de 4 tempos até 250 cm³ (Euro 4); carros, ônibus e caminhões seguem as classes HBEFA3. *Os ônibus seguem rotas aleatórias*, sem as linhas da URBS, portanto
 nenhum resultado específico de ônibus tem significado antes de carregar os itinerários reais. Bicicletas e pedestres entram no M3.
 
 = Calibração GEH
@@ -80,7 +81,7 @@ O volume simulado é o `entered` do `edgeData`. A cada rodada, o alvo do `routeS
 
 *Como interpretar.* Este resultado é *fraco como evidência* e não valida o modelo, por quatro razões. (1) O `routeSampler` é ajustado às mesmas contagens usadas depois no GEH, sem aproximações de validação nem
 checagem de tempos de viagem. (2) Em fluxos baixos (100–150 veíc/h) o GEH < 5 tolera erros relativos de cerca de ±50%, então o percentual simples superestima o ajuste; por isso a tabela traz também o percentual ponderado por volume
-e a razão entre os totais simulado e observado, que mostram onde o modelo fica aquém. (3) A escolha da melhor rodada seleciona o máximo sobre poucas tentativas, e há uma única semente nesta etapa (as réplicas entram no M4). (4) As contagens são sorteadas.
+e a razão entre os totais simulado e observado, que mostram onde o modelo fica aquém. (3) A realimentação amortecida não converge de forma monotônica: o percentual de GEH < 5 oscila entre as rodadas e piora em algumas (por exemplo, de 76,5% para 64,7% na manhã), e a melhor rodada é um máximo sobre poucas tentativas, e há uma única semente nesta etapa (as réplicas entram no M4). (4) As contagens são sorteadas.
 O que o exercício valida é o _encadeamento_ rede, demanda, otimização e medição. Com as contagens reais, o ciclo se repete trocando `data/placeholders/field_counts.csv` e executando `make calibrate`.
 A calibração deve incluir ainda tempos de viagem e filas observados, não só volumes.
 
@@ -88,8 +89,8 @@ A calibração deve incluir ainda tempos de viagem e filas observados, não só 
 
 == Método
 
-*Contabilidade.* O `edgeData` cobre a simulação inteira (0–5400 s: 1 h de demanda mais 30 min para escoar) e traz, por aresta, a emissão acumulada e a distância percorrida de *todos* os veículos, inclusive os que ainda estão na rede ao final.
-Emissões, veículos-km e velocidade média usam, portanto, o mesmo período e a mesma população. Os atrasos vêm só dos veículos concluídos, o que os subestima, e por isso a @tab-base traz também inseridos, concluídos e retidos.
+*Contabilidade.* O `edgeData` traz, por aresta, a emissão acumulada e a distância percorrida de *todos* os veículos, inclusive os que ainda estão na rede. Os totais usam só a *hora de demanda* (0–3600 s), que o fator $k$ estende à janela; a simulação roda 5400 s (1 h de demanda mais 30 min de escoamento) apenas para completar as viagens e medir atrasos.
+Emissões, veículos-km e velocidade média usam, portanto, o mesmo período e a mesma população, e $k$ não multiplica o escoamento. Os atrasos vêm só dos veículos concluídos, o que os subestima, e por isso a @tab-base traz também inseridos, concluídos e retidos. O comprimento de fila vem do `queue-output` do SUMO (percentil 95 por aresta, ponderado pelas amostras).
 
 *Escapamento.* O SUMO calcula a cada passo a emissão instantânea de cada veículo com as classes HBEFA3 @notter2019hbefa (função de velocidade e aceleração), de modo que o para-e-anda entra pela cinemática simulada.
 A hora simulada é estendida à janela de pico por
@@ -106,8 +107,8 @@ e fator de chuva com $P = 150$ dias com precipitação ≥ 0,254 mm em $N = 365$
 *Pegada de carbono.* É a massa de CO₂ de escapamento por janela e por veículo-km, a medida comparável entre cenários no M4. Não há abatimento do CO₂ biogênico do etanol, e não se computam CH₄ e N₂O (CO₂e):
 os fatores HBEFA3 são europeus e o combustível brasileiro tem mistura de etanol, então o valor absoluto é aproximado.
 
-*Ruído.* Estimado com o CoRTN @cortn1988 a 10 m do bordo, a partir de fluxo e velocidade simulados nas aproximações de cada ponto, somando as arestas por energia. A velocidade entra com piso de 20 km/h, que é o limite de validade do método;
-logo, a estimativa não capta o ganho acústico do para-e-anda e tende a subestimar benefícios de suavização.
+*Ruído.* Duas estimativas, ambas a partir do fluxo simulado nas aproximações dos pontos monitorados, com aproximações somadas e pontos combinados por média *energética* de dB: (a) CoRTN @cortn1988 a 10 m do bordo, com a vazão horária (`entered` de 0–3600 s) e velocidade com piso de 20 km/h, o limite de validade do método;
+(b) o modelo _harmonoise_ do SUMO, que soma ruído de rolamento e de propulsão e vale em baixas velocidades. O CoRTN com piso não capta o para-e-anda; o harmonoise o capta, mas é um nível por aresta, não por receptor a 10 m, de modo que as duas séries não são diretamente comparáveis em valor absoluto, só em variação entre cenários.
 
 == Resultados da linha de base
 
@@ -134,15 +135,18 @@ logo, a estimativa não capta o ganho acústico do para-e-anda e tende a subesti
 #figure(image("figures/m2_emis.png", width: 100%), caption: [Emissões de escapamento do As-Is por janela (HBEFA3 no SUMO, perfil horário provisório).]) <fig-emis2>
 
 #figure(
-  table(columns: (auto, auto, auto, auto), align: (left, right, right, right),
-    [Ponto], [Manhã Leq (dB)], [Tarde Leq (dB)], [Limite diurno (dB)],
-    ..B.am.noise_leq_dba.keys().map(k => (k, f1(B.am.noise_leq_dba.at(k)), f1(B.pm.noise_leq_dba.at(k)), [60])).flatten()),
-  caption: [Leq estimado (CoRTN a 10 m, velocidade com piso de 20 km/h) a partir do fluxo simulado. Estimativa, não medição.],
+  table(columns: (1fr, auto, auto), align: (left, right, right),
+    [Indicador], [Manhã], [Tarde],
+    [Leq CoRTN, 10 m, piso de 20 km/h (dB)], [#f1(B.am.noise_leq_dba.Leq_cortn_dba)], [#f1(B.pm.noise_leq_dba.Leq_cortn_dba)],
+    [Leq harmonoise do SUMO (dB)], [#f1(B.am.noise_leq_dba.Leq_harm_dba)], [#f1(B.pm.noise_leq_dba.Leq_harm_dba)],
+    [Limite diurno NBR 10151 (dB)], [60], [60],
+    [Fila p95 média nas arestas (m)], [#f0(B.am.queue_p95_m)], [#f0(B.pm.queue_p95_m)]),
+  caption: [Ruído estimado (média energética em P01 e P04) e fila. Estimativas sobre demanda provisória, não medições.],
 ) <tab-ruido>
 
 == Limitações que afetam a leitura
 
-- *Congestionamento severo.* Só uma parte dos veículos carregados conclui a viagem na janela, há _teleports_ e atraso de entrada de minutos (@tab-base). O CO por quilômetro é alto por refletir marcha lenta e o mapeamento de motos para carro. Os valores absolutos descrevem uma rede travada e não devem ser citados como inventário.
+- *Congestionamento severo.* Só uma parte dos veículos carregados conclui a viagem na janela, há _teleports_ e atraso de entrada de minutos (@tab-base). O CO por quilômetro é alto por refletir a marcha lenta de uma rede travada. Os valores absolutos descrevem uma rede travada e não devem ser citados como inventário. *Os _teleports_ não são difusos:* numa rodada com avisos ligados, #TP.total deles (#f0(TP.by_reason.jam) por congestionamento, #f0(TP.by_reason.yield) por _yield_ e #f0(TP.by_reason.at("wrong lane")) por faixa errada) ocorreram em apenas #TP.distinct_edges arestas, e #f0(100 * TP.top10_share)% nas dez piores, oito delas na Rua Conselheiro Laurindo (duas faixas, vários semáforos inferidos). É um defeito localizado do modelo (demanda sorteada concentrando um eixo e semáforos inferidos), e é o primeiro ponto a corrigir com dados reais.
 - *Fronteira.* A demanda existe só para viagens que passam pelas aproximações monitoradas dentro do núcleo. Os totais são da rede simulada, não do Quadrilátero inteiro.
 - *Pontos no Calçadão e cobertura da calibração.* P02 e P03 ficam sobre o Calçadão da XV, exclusivo de pedestres e ônibus em parte do trecho, e não têm aproximação motorizada que chegue ao ponto; por isso a calibração e o ruído cobrem só P01 e P04 (#CA.n_points pontos). Isso é pouca base para um critério de 85%: com contagens reais convém ampliar os pontos para cruzamentos com tráfego motorizado.
 - *Frota local.* O perfil de Curitiba (flex, diesel comercial, híbridos e elétricos) está parametrizado só na divisão carro/moto/ônibus/caminhão; a dos ônibus não vem da URBS.
@@ -157,7 +161,6 @@ As saídas ficam em `sim/work/`, ignorada pelo Git.
   [Semáforos], [Levantar fases e localização reais; substituir o `--tls.guess`],
   [Linhas de ônibus], [Carregar itinerários da URBS (chave de acesso) no lugar das rotas aleatórias],
   [Polígono de estudo], [Decidir entre casco convexo e núcleo; confirmar a via Mário Tourinho],
-  [Motocicletas], [Obter classe HBEFA4 de moto ou calcular as emissões delas fora do SUMO],
   [Fatores brasileiros], [Fatores de emissão do combustível nacional, CO₂e e CO₂ biogênico],
 )
 

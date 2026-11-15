@@ -20,6 +20,7 @@ class Params:
     ki_clamp: float = 6.0     # anti-windup
     bus_extend_max: float = 10.0
     bus_switch: bool = True
+    bus_targeted: bool = False  # prioridade condicional: só encerra o verde se a próxima fase verde serve o ônibus
     bus_only: bool = False    # só prioridade ao ônibus; o resto fica com a lógica base (actuated)
 
 
@@ -34,6 +35,8 @@ class State:
     bus_on_green: bool = False   # ônibus se aproximando em faixa com verde
     bus_on_red: bool = False     # ônibus se aproximando em faixa com vermelho
     occ_green: float = 0.0       # ocupação média (%) do laço nas faixas com verde
+    bus_next_serves: bool = True # a PRÓXIMA fase verde serve a faixa do ônibus que espera?
+    co2_gps: float = 0.0         # CO2 instantâneo nas faixas de aproximação (g/s)
 
 
 @dataclass
@@ -51,7 +54,7 @@ class Controller:
             return "hold", 0.0
         if s.t_in_phase < self.p.min_green:
             return "hold", 0.0
-        if s.bus_on_red and self.p.bus_switch and s.q_green < 3 + s.occ_green / 25:  # só tira o verde se a corrente atual não está carregada
+        if s.bus_on_red and self.p.bus_switch and (s.bus_next_serves or not self.p.bus_targeted) and s.q_green < 3 + s.occ_green / 25:  # só tira o verde se a corrente atual não está carregada
             return "switch", 0.0
         if s.bus_on_green and self.bus_extended < self.p.bus_extend_max and s.t_in_phase < self.p.max_green + self.p.bus_extend_max:
             self.bus_extended += self.p.extend

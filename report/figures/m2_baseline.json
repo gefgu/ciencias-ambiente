@@ -9,49 +9,51 @@
   "running_at_end": 442,
   "waiting_to_enter_at_end": 0,
   "depart_delay_s": 1.2,
-  "veh_km": 10011.3,
-  "mean_speed_kmh": 11.5,
+  "veh_km": 8478.5,
+  "mean_speed_kmh": 15.4,
   "mean_delay_finished_s": 430.7,
   "mean_wait_finished_s": 318.3,
   "teleports": 211,
   "bus_n": 101,
   "bus_mean_dur_s": 848.6,
   "total_kg": {
-   "CO2": 9453.96,
-   "CO": 313.5,
-   "NOx": 27.81,
-   "PMx": 0.52,
-   "HC": 2.37,
-   "fuel": 3003.79
+   "CO2": 5999.34,
+   "CO": 176.31,
+   "NOx": 17.47,
+   "PMx": 0.31,
+   "HC": 1.35,
+   "fuel": 1905.88
   },
   "window_kg": {
-   "CO2": 21363.54,
-   "CO": 708.43,
-   "NOx": 62.85,
-   "PMx": 1.18,
-   "HC": 5.36,
-   "fuel": 6787.79
+   "CO2": 13556.99,
+   "CO": 398.42,
+   "NOx": 39.47,
+   "PMx": 0.7,
+   "HC": 3.06,
+   "fuel": 4306.81
   },
   "g_per_vkm": {
-   "CO2": 944.329,
-   "CO": 31.315,
-   "NOx": 2.778,
-   "PMx": 0.052,
-   "HC": 0.237
+   "CO2": 707.596,
+   "CO": 20.795,
+   "NOx": 2.06,
+   "PMx": 0.036,
+   "HC": 0.16
   },
   "fleet_weight_short_tons": 2.41,
   "resuspension_window_kg": {
-   "PM25": 0.19,
-   "PM10": 0.79
+   "PM25": 0.16,
+   "PM10": 0.67
   },
   "resuspension_g_per_km": {
    "PM25": 0.0084,
    "PM10": 0.0349
   },
   "noise_leq_dba": {
-   "P01": 69.3,
-   "P04": 70.5
-  }
+   "Leq_cortn_dba": 69.2,
+   "Leq_harm_dba": 72.5
+  },
+  "queue_p95_m": 63.4,
+  "queue_max_mean_m": 31.7
  },
  "pm": {
   "window": "pm",
@@ -63,48 +65,50 @@
   "running_at_end": 414,
   "waiting_to_enter_at_end": 0,
   "depart_delay_s": 1.6,
-  "veh_km": 10435.7,
-  "mean_speed_kmh": 11.2,
+  "veh_km": 8703.0,
+  "mean_speed_kmh": 14.8,
   "mean_delay_finished_s": 519.9,
   "mean_wait_finished_s": 400.1,
   "teleports": 205,
   "bus_n": 115,
   "bus_mean_dur_s": 981.0,
   "total_kg": {
-   "CO2": 10078.27,
-   "CO": 340.29,
-   "NOx": 28.94,
-   "PMx": 0.54,
-   "HC": 2.49,
-   "fuel": 3202.4
+   "CO2": 6390.28,
+   "CO": 191.93,
+   "NOx": 18.45,
+   "PMx": 0.32,
+   "HC": 1.44,
+   "fuel": 2030.18
   },
   "window_kg": {
-   "CO2": 20156.54,
-   "CO": 680.59,
-   "NOx": 57.87,
-   "PMx": 1.07,
-   "HC": 4.98,
-   "fuel": 6404.81
+   "CO2": 12780.57,
+   "CO": 383.86,
+   "NOx": 36.89,
+   "PMx": 0.65,
+   "HC": 2.89,
+   "fuel": 4060.36
   },
   "g_per_vkm": {
-   "CO2": 965.746,
-   "CO": 32.609,
-   "NOx": 2.773,
-   "PMx": 0.051,
-   "HC": 0.239
+   "CO2": 734.264,
+   "CO": 22.054,
+   "NOx": 2.12,
+   "PMx": 0.037,
+   "HC": 0.166
   },
   "fleet_weight_short_tons": 2.41,
   "resuspension_window_kg": {
-   "PM25": 0.18,
-   "PM10": 0.73
+   "PM25": 0.15,
+   "PM10": 0.61
   },
   "resuspension_g_per_km": {
    "PM25": 0.0084,
    "PM10": 0.0349
   },
   "noise_leq_dba": {
-   "P01": 69.4,
-   "P04": 70.7
-  }
+   "Leq_cortn_dba": 69.3,
+   "Leq_harm_dba": 72.9
+  },
+  "queue_p95_m": 63.9,
+  "queue_max_mean_m": 30.7
  }
 }

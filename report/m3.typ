@@ -26,8 +26,8 @@
   date: "15 de novembro de 2026",
   abstract: [
     Implementa um controlador PI de fila entre fases com prioridade ao ônibus, a camada MQTT que o fecha com o SUMO, o projeto de sensoriamento e a modelagem de pedestres no Calçadão e de ciclistas.
-    *Resultado central, e negativo:* o PI completo não supera a lógica _actuated_ padrão do SUMO. Uma sobreposição só de prioridade ao ônibus pareceu melhorar a rede na semente de sintonia, mas *esse ganho não se confirmou nas cinco réplicas do M4* (era artefato de semente). O código funciona e é testado; o resultado de engenharia é que a intervenção não melhora esta rede.
-    Todo o conjunto opera sobre a demanda #ph(body: [provisória]) do M2.
+    *Resultado central, e negativo:* o PI completo não supera a lógica _actuated_ padrão do SUMO. Uma sobreposição só de prioridade ao ônibus pareceu melhorar a rede na semente de sintonia, mas *esse ganho não se confirmou nas cinco réplicas do M4* (era artefato de semente; a regra refeita tem efeito nulo). O código funciona e é testado; o resultado de engenharia é que a intervenção não melhora esta rede.
+    Uma onda verde adaptativa foi implementada na Rua Mariano Torres (a Av. Floriano não recebeu semáforos na inferência), e uma variante de prioridade ao ônibus condicional foi adicionada; ambas são avaliadas no M4. O plano de sensores cobre só os dois pontos monitorados, não os 223 semáforos simulados. Todo o conjunto opera sobre a demanda #ph(body: [provisória]) do M2.
   ],
 )
 
@@ -46,7 +46,7 @@ O erro de malha fechada é a diferença de pressão entre as fases, $e(k) = q_R(
 $ u(k) = K_p e(k) + K_i sum_(j<=k) e(j) T_s, quad T_s = 5 "s" $
 
 com integral limitada (anti-windup). Se $u$ ultrapassa a banda morta $theta$ o verde é encerrado; se há demanda no verde, ele é estendido em 5 s; o verde fica entre 8 s (mínimo) e 50 s (máximo).
-*Prioridade ao ônibus (BRT):* ônibus em aproximação com vermelho encerra o verde atual se a corrente em verde não está carregada; ônibus com verde recebe até 10 s adicionais por fase.
+*Prioridade ao ônibus (BRT):* ônibus em aproximação com vermelho encerra o verde atual se a corrente em verde não está carregada; ônibus com verde recebe até 10 s adicionais por fase. A versão *condicional* (`bus_targeted`) só encerra o verde se a próxima fase verde serve a faixa do ônibus, ignora ônibus parados (em ponto) e faz no máximo um pedido por ônibus e por semáforo.
 A lógica está em `src/cps/controllers.py`, sem dependência do SUMO, e tem testes unitários (`tests/test_controllers.py`) para tempo mínimo, amarelo, máximo, prioridade e anti-windup.
 
 == Sintonia e resultado
@@ -64,19 +64,24 @@ Os parâmetros foram comparados em grade, em uma única semente de sintonia (dis
 
 *O que a tabela mostra.* (1) Substituir os programas _actuated_ por programas fixos, sem controle algum ("controle nulo"), já derruba a velocidade média de cerca de 10,7 para 7,1 km/h: esse é o custo de perder a lógica por detectores do SUMO.
 (2) Sobre programas fixos, as variantes do PI ficam em 6,8–7,9 km/h, perto do controle nulo (7,1) e bem abaixo do actuated; só a amostragem de 10 s e o Kp maior ficam claramente acima do nulo. (3) Sobrepor o PI ao actuated piora o resultado (7,3 km/h): as duas lógicas disputam a duração das fases e o PI, ao encerrar verdes em rede saturada, desperdiça tempo perdido em amarelos.
-(4) Sobrepor *apenas a prioridade ao ônibus* ao actuated superou a referência *nesta semente*, mas o M4 mostra que isso não se repete com cinco sementes (a velocidade média cai). Concluímos que, nesta rede saturada e com semáforos inferidos, *nem o PI nem a prioridade ao ônibus melhoram o actuated padrão*; a tabela abaixo é um registro da sintonia, não um resultado de ganho. *Limitações do controlador, que condicionam o resultado negativo.* (a) O termo integral, limitado em 6, contribui no máximo $K_i dot 6 = 0,9$, abaixo da banda morta $theta = 1$, então ele sozinho nunca dispara uma troca; na prática a regra é quase puramente proporcional, e as linhas `ki0` e `theta2` da tabela coincidem. (b) O erro soma veículos parados por faixa, sem normalizar nem subtrair filas a jusante, de modo que não é a pressão do _max-pressure_ e pode estender verde de faixas bloqueadas por fila. (c) O "estender" soma 5 s ao tempo restante a cada decisão; como o restante não encolhe, equivale a segurar a fase até o máximo. (d) Os sensores são idealizados (contagem de parados por faixa e identificação de ônibus pelo simulador), não modelam laços ou câmeras. (e) Segurança: amarelo de 3 s sem vermelho total (herdado do `netconvert`) e verde mínimo de 8 s, que pode ser menor que o tempo de travessia de pedestres; chamadas de pedestre são ignoradas. A prioridade ao ônibus, ao encerrar o verde, só avança o ciclo e pode não servir a fase do ônibus, nem distingue ônibus parado em ponto. A conclusão vale, portanto, para _esta implementação_, não para controle adaptativo em geral. A grade é pequena e de uma semente, e os concluídos diferem entre configurações (2.240 a 2.957), de modo que o atraso dos concluídos tem viés de sobrevivência e a velocidade espacial é a medida mais confiável. O M4 verifica o resultado com cinco sementes e uma ablação da prioridade ao ônibus. Atenção: com rotas de ônibus aleatórias (M2), o efeito da prioridade
+(4) Sobrepor *apenas a prioridade ao ônibus* ao actuated superou a referência *nesta semente*, com a regra básica da época (que repetia pedidos por ônibus). No M4, com cinco sementes e a regra refeita (um pedido por ônibus e semáforo, só em movimento), o efeito é *estatisticamente nulo*. Concluímos que, nesta rede saturada e com semáforos inferidos, *o PI não melhora o actuated padrão* e a prioridade ao ônibus não tem efeito mensurável; a tabela é um registro da sintonia (feita com as regras básicas anteriores ao refinamento), não um resultado de ganho. *Limitações do controlador, que condicionam o resultado negativo.* (a) O termo integral, limitado em 6, contribui no máximo $K_i dot 6 = 0,9$, abaixo da banda morta $theta = 1$, então ele sozinho nunca dispara uma troca; na prática a regra é quase puramente proporcional, e as linhas `ki0` e `theta2` da tabela coincidem. (b) O erro soma veículos parados por faixa, sem normalizar nem subtrair filas a jusante, de modo que não é a pressão do _max-pressure_ e pode estender verde de faixas bloqueadas por fila. (c) O "estender" soma 5 s ao tempo restante a cada decisão; como o restante não encolhe, equivale a segurar a fase até o máximo. (d) Os sensores são idealizados (contagem de parados por faixa e identificação de ônibus pelo simulador), não modelam laços ou câmeras. (e) Segurança: amarelo de 3 s sem vermelho total (herdado do `netconvert`) e verde mínimo de 8 s, que pode ser menor que o tempo de travessia de pedestres; chamadas de pedestre são ignoradas. Na versão básica, a prioridade ao ônibus só avança o ciclo e pode não servir a fase do ônibus nem distinguir ônibus parado em ponto; a versão condicional corrige isso. A conclusão vale, portanto, para _esta implementação_, não para controle adaptativo em geral. A grade é pequena e de uma semente, e os concluídos diferem entre configurações (2.240 a 2.957), de modo que o atraso dos concluídos tem viés de sobrevivência e a velocidade espacial é a medida mais confiável. O M4 verifica o resultado com cinco sementes e uma ablação da prioridade ao ônibus. Atenção: com rotas de ônibus aleatórias (M2), o efeito da prioridade
 é de natureza sistêmica e não deve ser lido como ganho para as linhas reais.
 
-== Onda verde adaptativa: não implementada
+== Onda verde adaptativa
 
-O manual pede "onda verde adaptativa" (sincronização de semáforos ao longo de um eixo). *Isso não foi feito.* Cada controlador decide isoladamente, e os programas gerados pelo `netconvert` têm defasagem zero. A implementação exigiria ciclo comum nos semáforos do eixo (por exemplo, a Av. Mal. Floriano Peixoto), defasagens calculadas pela distância entre cruzamentos e a velocidade de progressão, e ajuste adaptativo conforme a fila; isso depende dos tempos de ciclo e das fases reais, que não temos. Fica como pendência prioritária.
+Implementada em `src/cps/greenwave.py` e avaliada no M4 como o cenário `tobe_gw`. Os semáforos do eixo recebem um *ciclo comum* de 90 s (os verdes são reescalados proporcionalmente, com amarelos mantidos e verde mínimo de 5 s); a *fase principal* é a que serve mais ligações do eixo;
+e a defasagem ideal do semáforo $i$ é $o_i = (s_i slash v_p) mod C$, com $s_i$ a posição ao longo do eixo e $v_p$ a velocidade de progressão. A parte *adaptativa* reestima $v_p$ a cada 300 s pela velocidade média das arestas do eixo (limitada entre 5,5 e 13,9 m/s)
+e desloca cada defasagem em até 8 s por atualização, ajustando a duração restante da fase atual. Os demais semáforos mantêm o _actuated_.
+
+*Limites.* (1) O eixo do manual, a Av. Mal. Floriano Peixoto, *não recebeu nenhum semáforo* na inferência do `netconvert`; usamos a Rua Mariano Torres (uma das seis vias do contorno, com 17 semáforos inferidos). (2) Ciclo, fases e posição dos semáforos são inferidos, então a coordenação não corresponde à operação real. (3) Há uma única direção de progressão (a defasagem não é bidirecional) e as velocidades em engarrafamento ficam abaixo do mínimo de progressão.
+(4) A aritmética de defasagem e de reescala de verdes tem testes (`tests/test_models.py`); o efeito no tráfego aparece no M4.
 
 = Comunicação MQTT
 
 A malha fecha por mensagens, no formato do contrato do M1 (validado por `pydantic` a cada publicação):
 
 #table(columns: (auto, 1fr), [Tópico], [Conteúdo],
-  [`cps/curitiba/{id}/sensors/{sensor}`], [Mensagem do contrato (estado do laço, fila estimada em metros)],
+  [`cps/curitiba/{id}/sensors/{sensor}`], [Mensagem do contrato (estado do laço, fila estimada em metros e CO₂ instantâneo das faixas, vindo do modelo de emissões)],
   [`cps/curitiba/{id}/state`], [Estado completo da interseção para o controlador (filas, ocupação, ônibus, fase)],
   [`cps/curitiba/{id}/signal/cmd`], [Comando do controlador: `hold`, `extend` + segundos ou `switch`],
   [`cps/curitiba/bus/{linha}/priority`], [Reservado para pedido de prioridade de ônibus (a implementar com dados da URBS)])
@@ -116,7 +121,7 @@ e mantivemos #f0(AD.persons_requested) deles, o que enviesa a demanda para pares
 #table(columns: (auto, 1fr), [Pendência], [Ação],
   [Mosquitto e hardware], [Repetir o teste com Mosquitto e nós reais (ESP32/Wokwi); medir latência, perda e QoS],
   [Equivalência], [Teste automático comparando decisões via MQTT e em processo],
-  [Onda verde], [Implementar coordenação por eixo (ciclo comum, defasagens, ajuste adaptativo) com as fases reais],
+  [Onda verde], [Refazer com fases, ciclos e posições reais dos semáforos e em ambos os sentidos; usar a Av. Floriano],
   [Pedestres no controle], [O controlador não vê pedestres esperando; incluir demanda de travessia na pressão das fases],
   [Linhas da URBS], [Prioridade de ônibus só vale com os itinerários e a telemetria reais],
   [Sintonia], [Refazer com contagens reais, grade maior e várias sementes; testar outros algoritmos (ex.: max-pressure com aprendizado de fase) contra o actuated],

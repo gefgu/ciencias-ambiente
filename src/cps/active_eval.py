@@ -65,7 +65,7 @@ def metrics(tag: str) -> dict:
             "ped_speed_kmh": float(pers.len.sum() / pers.dur.sum() * 3.6) if len(pers) and pers.dur.sum() else np.nan}
 
 
-def run(workers=3):
+def run(workers=9):
     repaired_car_routes("am")
     active_modes.build_demand(str(SIM / "net_active.net.xml"), "am")  # uma vez; as mesmas rotas valem nas duas variantes
     jobs = [(s, k) for s in SCEN for k in SEEDS]

@@ -3,6 +3,7 @@
   <time><begin value="0"/><end value="5400"/><step-length value="1"/></time>
   <processing><time-to-teleport value="300"/></processing>
   <random_number><seed value="1"/></random_number>
-  <output><tripinfo-output value="work/tripinfo_asis_pm.xml"/><statistic-output value="work/stats_asis_pm.xml"/></output>
+  <output><tripinfo-output value="work/tripinfo_asis_pm.xml"/><statistic-output value="work/stats_asis_pm.xml"/>
+    <queue-output value="work/queue_asis_pm.xml"/><queue-output.aggregation value="3600"/><queue-output.percentile value="95"/></output>
   <report><no-step-log value="true"/><no-warnings value="true"/></report>
 </configuration>

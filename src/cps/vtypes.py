@@ -1,7 +1,7 @@
 """Frota (M2). Classes de emissão: HBEFA3 embutidas no SUMO 1.28.
 
 Limitações assumidas e documentadas:
- - não há classe de motocicleta HBEFA3/4 nesta build: motos usam HBEFA3/PC_G_EU4 (SUPERESTIMA, pois moto emite menos CO2)
+ - motos usam a classe HBEFA4/MC_4S_le250cc_Euro-4 (motocicleta 4 tempos até 250 cc, Euro 4); os demais veículos seguem HBEFA3 (carros, ônibus, caminhões)
  - bicicletas e pedestres entram só no M3
  - participações (mix) vêm de data/placeholders/field_counts.csv (PROVISÓRIO) renormalizadas sem bicicletas
 """
@@ -13,7 +13,7 @@ from .common import SIM
 TYPES = {  # id: (vClass, emissionClass, length, maxSpeed, accel, decel)
     "car_g": ("passenger", "HBEFA3/PC_G_EU4", 4.5, 16.7, 2.6, 4.5),
     "car_d": ("passenger", "HBEFA3/PC_D_EU4", 4.5, 16.7, 2.6, 4.5),
-    "moto": ("motorcycle", "HBEFA3/PC_G_EU4", 2.2, 16.7, 4.0, 5.0),
+    "moto": ("motorcycle", "HBEFA4/MC_4S_le250cc_Euro-4", 2.2, 16.7, 4.0, 5.0),
     "bus": ("bus", "HBEFA3/Bus", 12.0, 13.9, 1.2, 4.0),
     "truck": ("truck", "HBEFA3/HDV_D_EU4", 9.0, 13.9, 1.0, 4.0),
 }

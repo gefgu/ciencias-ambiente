@@ -1,4 +1,7 @@
 <additional>
   <edgeData id="flow" file="work/edge_flow_asis_pm.xml" begin="0" end="5400" excludeEmpty="true"/>
   <edgeData id="emi" type="emissions" file="work/edge_emi_asis_pm.xml" begin="0" end="5400" excludeEmpty="true"/>
+  <edgeData id="flow1h" file="work/edge_flow1h_asis_pm.xml" begin="0" end="3600" excludeEmpty="true"/>
+  <edgeData id="emi1h" type="emissions" file="work/edge_emi1h_asis_pm.xml" begin="0" end="3600" excludeEmpty="true"/>
+  <edgeData id="noise1h" type="harmonoise" file="work/edge_noise1h_asis_pm.xml" begin="0" end="3600" excludeEmpty="true"/>
 </additional>
