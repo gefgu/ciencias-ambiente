@@ -1,0 +1,31 @@
+{
+ "area_km2": 30.42682437741421,
+ "ciclo_km": 49.365996201263215,
+ "n_segments": 9691.0,
+ "n_points": 5.0,
+ "bus": {
+  "Entrepico (10:00–16:00)": {
+   "vel_media_kmh": 21.9,
+   "pct_parado": 20.7
+  },
+  "Pico manhã (06:30–09:00)": {
+   "vel_media_kmh": 14.6,
+   "pct_parado": 36.4
+  },
+  "Pico tarde (17:00–19:00)": {
+   "vel_media_kmh": 12.1,
+   "pct_parado": 42.3
+  }
+ },
+ "n_acima_limite": 5,
+ "mix": {
+  "carros": 0.7842102033485486,
+  "motos": 0.11716411130288508,
+  "onibus": 0.04152628198950403,
+  "caminhoes": 0.045838098283671656,
+  "bicicletas": 0.011261305075390533
+ },
+ "n_nodes_core": 3357,
+ "n_ciclorrotas": 85,
+ "n_terminais": 3
+}

@@ -1,0 +1,6 @@
+point_id,periodo,leq_dba,residual_dba,limite_nbr10151,data_medicao,instrumento,is_placeholder
+P01,diurno,68.2,57.0,60,,,True
+P02,diurno,72.2,64.6,60,,,True
+P03,diurno,74.7,66.7,60,,,True
+P04,diurno,68.6,58.6,60,,,True
+P05,diurno,76.1,68.9,60,,,True

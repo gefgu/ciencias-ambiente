@@ -1,0 +1,110 @@
+{
+ "am": {
+  "window": "am",
+  "label": "06:30–09:00",
+  "scale_to_window": 2.26,
+  "loaded": 3302,
+  "inserted": 3302,
+  "finished": 2860,
+  "running_at_end": 442,
+  "waiting_to_enter_at_end": 0,
+  "depart_delay_s": 1.2,
+  "veh_km": 10011.3,
+  "mean_speed_kmh": 11.5,
+  "mean_delay_finished_s": 430.7,
+  "mean_wait_finished_s": 318.3,
+  "teleports": 211,
+  "bus_n": 101,
+  "bus_mean_dur_s": 848.6,
+  "total_kg": {
+   "CO2": 9453.96,
+   "CO": 313.5,
+   "NOx": 27.81,
+   "PMx": 0.52,
+   "HC": 2.37,
+   "fuel": 3003.79
+  },
+  "window_kg": {
+   "CO2": 21363.54,
+   "CO": 708.43,
+   "NOx": 62.85,
+   "PMx": 1.18,
+   "HC": 5.36,
+   "fuel": 6787.79
+  },
+  "g_per_vkm": {
+   "CO2": 944.329,
+   "CO": 31.315,
+   "NOx": 2.778,
+   "PMx": 0.052,
+   "HC": 0.237
+  },
+  "fleet_weight_short_tons": 2.41,
+  "resuspension_window_kg": {
+   "PM25": 0.19,
+   "PM10": 0.79
+  },
+  "resuspension_g_per_km": {
+   "PM25": 0.0084,
+   "PM10": 0.0349
+  },
+  "noise_leq_dba": {
+   "P01": 69.3,
+   "P04": 70.5
+  }
+ },
+ "pm": {
+  "window": "pm",
+  "label": "17:00–19:00",
+  "scale_to_window": 2.0,
+  "loaded": 3389,
+  "inserted": 3389,
+  "finished": 2975,
+  "running_at_end": 414,
+  "waiting_to_enter_at_end": 0,
+  "depart_delay_s": 1.6,
+  "veh_km": 10435.7,
+  "mean_speed_kmh": 11.2,
+  "mean_delay_finished_s": 519.9,
+  "mean_wait_finished_s": 400.1,
+  "teleports": 205,
+  "bus_n": 115,
+  "bus_mean_dur_s": 981.0,
+  "total_kg": {
+   "CO2": 10078.27,
+   "CO": 340.29,
+   "NOx": 28.94,
+   "PMx": 0.54,
+   "HC": 2.49,
+   "fuel": 3202.4
+  },
+  "window_kg": {
+   "CO2": 20156.54,
+   "CO": 680.59,
+   "NOx": 57.87,
+   "PMx": 1.07,
+   "HC": 4.98,
+   "fuel": 6404.81
+  },
+  "g_per_vkm": {
+   "CO2": 965.746,
+   "CO": 32.609,
+   "NOx": 2.773,
+   "PMx": 0.051,
+   "HC": 0.239
+  },
+  "fleet_weight_short_tons": 2.41,
+  "resuspension_window_kg": {
+   "PM25": 0.18,
+   "PM10": 0.73
+  },
+  "resuspension_g_per_km": {
+   "PM25": 0.0084,
+   "PM10": 0.0349
+  },
+  "noise_leq_dba": {
+   "P01": 69.4,
+   "P04": 70.7
+  }
+ }
+}

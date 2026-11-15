@@ -1,0 +1,8 @@
+<configuration>
+  <input><net-file value="net.net.xml"/><route-files value="routes_asis_pm.rou.xml"/><additional-files value="vtypes.add.xml,detectors_asis_pm.add.xml"/></input>
+  <time><begin value="0"/><end value="5400"/><step-length value="1"/></time>
+  <processing><time-to-teleport value="300"/></processing>
+  <random_number><seed value="1"/></random_number>
+  <output><tripinfo-output value="work/tripinfo_asis_pm.xml"/><statistic-output value="work/stats_asis_pm.xml"/></output>
+  <report><no-step-log value="true"/><no-warnings value="true"/></report>
+</configuration>

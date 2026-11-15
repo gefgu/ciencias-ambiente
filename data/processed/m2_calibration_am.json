@@ -1,0 +1,42 @@
+{
+ "window": "am",
+ "history": [
+  {
+   "iter": 0,
+   "vehicles": 3302,
+   "pct_geh_lt5": 76.5,
+   "mean_geh": 4.55
+  },
+  {
+   "iter": 1,
+   "vehicles": 3594,
+   "pct_geh_lt5": 70.6,
+   "mean_geh": 5.01
+  },
+  {
+   "iter": 2,
+   "vehicles": 3956,
+   "pct_geh_lt5": 64.7,
+   "mean_geh": 5.41
+  },
+  {
+   "iter": 3,
+   "vehicles": 4049,
+   "pct_geh_lt5": 64.7,
+   "mean_geh": 4.99
+  },
+  {
+   "iter": 4,
+   "vehicles": 4049,
+   "pct_geh_lt5": 64.7,
+   "mean_geh": 5.11
+  }
+ ],
+ "final_pct_geh_lt5": 76.5,
+ "weighted_pct_geh_lt5": 72.5,
+ "sim_over_obs_total": 0.743,
+ "n_links": 17,
+ "n_points": 2,
+ "ok": false,
+ "placeholder_observed": true
+}

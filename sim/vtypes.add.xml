@@ -1,0 +1,7 @@
+<additional>
+  <vType id="car_g" vClass="passenger" emissionClass="HBEFA3/PC_G_EU4" length="4.5" maxSpeed="16.7" accel="2.6" decel="4.5" sigma="0.5" color="0,100,200"/>
+  <vType id="car_d" vClass="passenger" emissionClass="HBEFA3/PC_D_EU4" length="4.5" maxSpeed="16.7" accel="2.6" decel="4.5" sigma="0.5" color="20,60,120"/>
+  <vType id="moto" vClass="motorcycle" emissionClass="HBEFA3/PC_G_EU4" length="2.2" maxSpeed="16.7" accel="4.0" decel="5.0" sigma="0.5" color="217,119,6"/>
+  <vType id="bus" vClass="bus" emissionClass="HBEFA3/Bus" length="12.0" maxSpeed="13.9" accel="1.2" decel="4.0" sigma="0.5" color="15,118,110"/>
+  <vType id="truck" vClass="truck" emissionClass="HBEFA3/HDV_D_EU4" length="9.0" maxSpeed="13.9" accel="1.0" decel="4.0" sigma="0.5" color="124,58,237"/>
+</additional>

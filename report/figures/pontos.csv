@@ -1,0 +1,6 @@
+point_id,name,lat,lon,vpd_total,vph_manha,vph_tarde,leq_dba,residual_dba,cortn_dba,limite_nbr10151,co2_kg_h_km,nox_kg_h_km
+P01,Pres. Kennedy × Mal. Floriano Peixoto,-25.45081,-49.26226,19704,1496,1535,68.2,57.0,70.8,60,425.0,1.3
+P02,R. XV de Novembro × Mal. Floriano Peixoto,-25.43126,-49.27184,25955,1971,2022,72.2,64.6,73.2,60,599.0,2.2
+P03,R. XV de Novembro × Dr. Muricy,-25.43158,-49.27267,22333,1696,1740,74.7,66.7,72.3,60,517.0,1.9
+P04,R. XV de Novembro × Mariano Torres,-25.42807,-49.26367,26078,1980,2032,68.6,58.6,71.8,60,572.0,1.8
+P05,Martim Afonso × Gen. Mário Tourinho,-25.43751,-49.30792,20069,1524,1564,76.1,68.9,71.1,60,434.0,1.5

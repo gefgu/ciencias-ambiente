@@ -1,0 +1,10 @@
+{
+ "lacos_indutivos": 34,
+ "cameras_contagem": 2,
+ "sensores_ruido_classe2": 2,
+ "nos_ESP32": 2,
+ "pontos": 2,
+ "aproximacoes": 17,
+ "msgs_por_s": 0.8,
+ "kbit_s": 2.69
+}

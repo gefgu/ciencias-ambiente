@@ -1,0 +1,22 @@
+{
+ "tls_controlled": [
+  "f3ca6aaa-053f-4db8-aded-aee4373c7ead",
+  "f26b7214-52af-4287-b46c-451c3f7a4635",
+  "d8652a73-75d9-43fe-86a0-024fdf199c91",
+  "1034ad2b-034a-4f67-a067-c14abf782727",
+  "aa72d929-f52f-4f0d-ab73-0baad0f90578",
+  "d29b0fc1-f9dc-4282-9fc4-84077ad654a3"
+ ],
+ "sim_seconds": 600,
+ "msgs_published": 2160,
+ "commands_received": 720,
+ "latency_ms_median": 0.82,
+ "latency_ms_p95": 1.62,
+ "stale_discarded": 0,
+ "timeouts": 0,
+ "decisions": {
+  "extend": 12,
+  "switch": 84,
+  "hold": 624
+ }
+}

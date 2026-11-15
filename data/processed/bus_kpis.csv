@@ -1,0 +1,10 @@
+window,corridor,vel_media_kmh,pct_parado,desvio_vel,n_fixes,is_placeholder
+Entrepico (10:00–16:00),Alameda Dr. Muricy,21.34,22.88,54.85,118,True
+Entrepico (10:00–16:00),Av. Mal. Floriano Peixoto,22.35,22.81,67.6,171,True
+Entrepico (10:00–16:00),R. Mariano Torres,22.1,16.33,48.27,98,True
+Pico manhã (06:30–09:00),Alameda Dr. Muricy,16.26,38.51,45.4,161,True
+Pico manhã (06:30–09:00),Av. Mal. Floriano Peixoto,14.01,36.7,53.16,297,True
+Pico manhã (06:30–09:00),R. Mariano Torres,13.49,33.87,39.15,186,True
+Pico tarde (17:00–19:00),Alameda Dr. Muricy,11.67,46.29,37.75,229,True
+Pico tarde (17:00–19:00),Av. Mal. Floriano Peixoto,11.77,42.66,47.16,368,True
+Pico tarde (17:00–19:00),R. Mariano Torres,12.85,38.07,38.19,197,True
