@@ -21,6 +21,9 @@ SCENARIOS = {  # nome: argumentos de tobe.run
     "tobe_fake": dict(adaptive=True, static=False, bus_priority=True, params=Params(bus_only=True), fake_bus_every=30),  # ablação: regra em 1/30 dos veículos que não são ônibus
     "tobe_bus2": dict(adaptive=True, static=False, bus_priority=True, params=Params(bus_only=True, bus_targeted=True)),  # prioridade condicional (próxima fase serve o ônibus)
     "tobe_gw": dict(adaptive=False, greenwave=True),                                                                # onda verde adaptativa na Rua Mariano Torres
+    "asis_rb": dict(adaptive=False, real_buses=True),                                                                # As-Is com ônibus REAIS da URBS (GPS de 12/11/2026)
+    "tobe_rb": dict(adaptive=True, static=False, bus_priority=True, params=Params(bus_only=True), real_buses=True),
+    "tobe_bus2_rb": dict(adaptive=True, static=False, bus_priority=True, params=Params(bus_only=True, bus_targeted=True), real_buses=True),
     "tobe_fixed90": dict(adaptive=False, greenwave="fixed"),                                                        # CONTROLE da onda: mesmos programas fixos de 90 s, defasagens aleatórias
 }
 SEEDS = [1, 2, 3, 4, 5]
@@ -34,7 +37,11 @@ METRICS = ["delay_s", "speed_kmh", "finished", "inserted", "teleports", "bus_del
 def _one(args):
     from . import tobe
     scen, win, seed, scale, tag = args
-    return tobe.run(win, tag=tag, seed=seed, scale=scale, **SCENARIOS[scen])
+    kw = dict(SCENARIOS[scen])
+    if kw.pop("real_buses", False):   # carros do M2 sem os ônibus sorteados + ônibus reais map-matched
+        kw["routes"] = SIM / f"routes_nobus_{win}.rou.xml"
+        kw["extra_routes"] = str(SIM / f"routes_realbus_{win}.rou.xml")
+    return tobe.run(win, tag=tag, seed=seed, scale=scale, **kw)
 
 
 def _save_decisions(infos):

@@ -3,6 +3,7 @@
 #let R = json("figures/m4_results.json")
 #let SW = json("figures/m4_sweep.json")
 #let AC = json("figures/m4_active.json")
+#let RB = json("figures/m4_realbus.json")
 #let EX = json("figures/m4_extra.json")
 #let TP = json("figures/m4_teleports.json")
 #let fix(x, d) = {
@@ -133,6 +134,20 @@ entre semáforos de uma rede em engarrafamento (onde a progressão a 40 km/h nã
 - *Emissões.* Seguem a velocidade e a vazão (HBEFA responde à cinemática). Os valores absolutos de CO₂ (cerca de 700 a 900 g/km) e de CO são várias vezes os típicos da literatura para frotas leves porque a rede está engarrafada e os fatores são europeus; servem para comparar cenários, não para citar. Atraso dos concluídos e dos ônibus têm viés de sobrevivência.
 - *Ruído.* Os níveis são mostrados como diferença em dB (um Δ% de dB não tem sentido). O CoRTN com piso de velocidade só enxerga a vazão e praticamente não muda entre cenários. O harmonoise sobe cerca de 1,2 a 1,6 dB nos dois cenários com os semáforos do eixo da Rua Mariano Torres em programa fixo (onda verde e controle), e quase nada nos demais; inclusive no controle sem coordenação (#sg(D("am", "tobe_fixed90", "Leq_harm_dba").delta_mean, d: 1) dB): mais provavelmente reflete mais veículos-segundo em fila nas arestas do que aceleração e frenagem. É um nível de fonte por aresta, sem propagação a receptores; P04 (Rua XV × Rua Mariano Torres) fica no eixo da onda e P01 não. Não é uma simulação acústica completa e não há medição de campo.
 - *Poeira.* A ressuspensão (AP-42, premissas assumidas) é proporcional aos veículos-km; uma queda nela significa menos veículos-km percorridos, não benefício.
+
+= Prioridade ao ônibus com demanda de ônibus real
+
+Os dados abertos da URBS (espelho da UFPR/C3SL, `dadosabertos.c3sl.ufpr.br/curitibaurbs`) incluem o GPS de todos os ônibus. Usamos a quinta-feira 12/11/2026: no horário de pico passam
+#RB.n_real_buses.am ônibus (manhã) e #RB.n_real_buses.pm (tarde) pela área, com map-matching na rede e horário real de partida. O sorteio provisório usava só 131 por hora: a demanda real de ônibus é cerca de cinco vezes maior, e a rede fica mais congestionada (velocidade média 14,2 contra 15,4 km/h).
+
+#table(columns: (auto, auto, auto, auto), align: (left, right, right, right),
+  [*Janela*], [*Velocidade do ônibus no SUMO*], [*Velocidade real (GPS)*], [*Correlação de postos*],
+  [Manhã], [#calc.round(RB.validation.am.sim_kmh, digits: 1) km/h], [#calc.round(RB.validation.am.real_kmh, digits: 1) km/h], [#calc.round(RB.validation.am.spearman, digits: 2)],
+  [Tarde], [#calc.round(RB.validation.pm.sim_kmh, digits: 1) km/h], [#calc.round(RB.validation.pm.real_kmh, digits: 1) km/h], [#calc.round(RB.validation.pm.spearman, digits: 2)])
+
+O SUMO é cerca de 40% mais rápido que o GPS: o real inclui paradas de embarque, que o modelo não representa (limitação). A prioridade ao ônibus, com 5 sementes por janela, continua sem efeito mensurável sobre o ônibus:
+variação da velocidade do ônibus de #calc.round(RB.am.tobe_rb.bus_speed_kmh.diff, digits: 1) km/h na manhã (p = #calc.round(RB.am.tobe_rb.bus_speed_kmh.p, digits: 2)) e #calc.round(RB.pm.tobe_rb.bus_speed_kmh.diff, digits: 1) km/h na tarde (p = #calc.round(RB.pm.tobe_rb.bus_speed_kmh.p, digits: 2)).
+Com ônibus reais a regra dispara bem mais (cerca de 1.300 extensões e 110 trocas por hora), mas o resultado não muda. A variante condicional repete a básica, como esperado. O sinal de menos teleports (−63 na manhã, p = 0,09) não é significativo.
 
 = Varredura de demanda
 

@@ -42,5 +42,5 @@ rode `make calibrate baseline` e regenere os relatórios.
 
 ## Pendências principais
 
-Contagens e Leq de campo; semáforos reais; linhas e telemetria da URBS (precisa de chave); onda verde; teste com Mosquitto e hardware;
+Contagens e Leq de campo; semáforos reais; telemetria ao vivo da URBS (precisa de chave; o GPS histórico de 12/11/2026 é real e aberto, `make` via `src/m1/urbs_real.py`); onda verde; teste com Mosquitto e hardware;
 decisão sobre o polígono de estudo (casco convexo de 30 km² vs núcleo) e a via "Mário Tourinho".

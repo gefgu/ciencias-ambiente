@@ -163,5 +163,155 @@
   "extend": 1620,
   "switch": 36,
   "hold": 239184
+ },
+ "asis_rb_s1_am": {
+  "extend": 0,
+  "switch": 0,
+  "hold": 0
+ },
+ "asis_rb_s2_am": {
+  "extend": 0,
+  "switch": 0,
+  "hold": 0
+ },
+ "asis_rb_s3_am": {
+  "extend": 0,
+  "switch": 0,
+  "hold": 0
+ },
+ "asis_rb_s4_am": {
+  "extend": 0,
+  "switch": 0,
+  "hold": 0
+ },
+ "asis_rb_s5_am": {
+  "extend": 0,
+  "switch": 0,
+  "hold": 0
+ },
+ "tobe_rb_s1_am": {
+  "extend": 1332,
+  "switch": 109,
+  "hold": 239399
+ },
+ "tobe_rb_s2_am": {
+  "extend": 1707,
+  "switch": 108,
+  "hold": 239025
+ },
+ "tobe_rb_s3_am": {
+  "extend": 1289,
+  "switch": 102,
+  "hold": 239449
+ },
+ "tobe_rb_s4_am": {
+  "extend": 1092,
+  "switch": 101,
+  "hold": 239647
+ },
+ "tobe_rb_s5_am": {
+  "extend": 1493,
+  "switch": 124,
+  "hold": 239223
+ },
+ "tobe_bus2_rb_s1_am": {
+  "extend": 1332,
+  "switch": 109,
+  "hold": 239399
+ },
+ "tobe_bus2_rb_s2_am": {
+  "extend": 1707,
+  "switch": 108,
+  "hold": 239025
+ },
+ "tobe_bus2_rb_s3_am": {
+  "extend": 1289,
+  "switch": 102,
+  "hold": 239449
+ },
+ "tobe_bus2_rb_s4_am": {
+  "extend": 1092,
+  "switch": 101,
+  "hold": 239647
+ },
+ "tobe_bus2_rb_s5_am": {
+  "extend": 1493,
+  "switch": 124,
+  "hold": 239223
+ },
+ "asis_rb_s1_pm": {
+  "extend": 0,
+  "switch": 0,
+  "hold": 0
+ },
+ "asis_rb_s2_pm": {
+  "extend": 0,
+  "switch": 0,
+  "hold": 0
+ },
+ "asis_rb_s3_pm": {
+  "extend": 0,
+  "switch": 0,
+  "hold": 0
+ },
+ "asis_rb_s4_pm": {
+  "extend": 0,
+  "switch": 0,
+  "hold": 0
+ },
+ "asis_rb_s5_pm": {
+  "extend": 0,
+  "switch": 0,
+  "hold": 0
+ },
+ "tobe_rb_s1_pm": {
+  "extend": 993,
+  "switch": 117,
+  "hold": 239730
+ },
+ "tobe_rb_s2_pm": {
+  "extend": 1327,
+  "switch": 106,
+  "hold": 239407
+ },
+ "tobe_rb_s3_pm": {
+  "extend": 989,
+  "switch": 124,
+  "hold": 239727
+ },
+ "tobe_rb_s4_pm": {
+  "extend": 1283,
+  "switch": 112,
+  "hold": 239445
+ },
+ "tobe_rb_s5_pm": {
+  "extend": 996,
+  "switch": 93,
+  "hold": 239751
+ },
+ "tobe_bus2_rb_s1_pm": {
+  "extend": 1346,
+  "switch": 112,
+  "hold": 239382
+ },
+ "tobe_bus2_rb_s2_pm": {
+  "extend": 1327,
+  "switch": 106,
+  "hold": 239407
+ },
+ "tobe_bus2_rb_s3_pm": {
+  "extend": 989,
+  "switch": 124,
+  "hold": 239727
+ },
+ "tobe_bus2_rb_s4_pm": {
+  "extend": 1283,
+  "switch": 111,
+  "hold": 239446
+ },
+ "tobe_bus2_rb_s5_pm": {
+  "extend": 996,
+  "switch": 93,
+  "hold": 239751
  }
 }
