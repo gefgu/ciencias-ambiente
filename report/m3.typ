@@ -53,7 +53,7 @@ A lógica está em `src/cps/controllers.py`, sem dependência do SUMO, e tem tes
 
 #figure(image("figures/m3_loop.png", width: 100%), caption: [Malha fechada do controle semafórico: referência de pressão igual entre fases, controlador PI, atuador de fase (TraCI) e planta (SUMO), com sensores e MQTT na realimentação.]) <fig-loop>
 
-Os parâmetros foram comparados em grade, em uma única semente de sintonia (distinta das réplicas do M4). A @tab-tune traz velocidade média espacial, veículos concluídos, atraso dos concluídos e _teleports_; a primeira linha por velocidade é a melhor.
+Os parâmetros foram comparados em grade, em uma única semente de sintonia (distinta das réplicas do M4). *Base da tabela:* medições e regras da época da sintonia (velocidade sobre a simulação inteira de 5400 s e regra básica de prioridade), por isso os valores absolutos não coincidem com os do M4, que usa a hora de demanda e a regra refeita. A @tab-tune traz velocidade média espacial, veículos concluídos, atraso dos concluídos e _teleports_; a primeira linha por velocidade é a melhor.
 
 #figure(
   table(columns: (1fr, auto, auto, auto, auto), align: (left, right, right, right, right),
@@ -71,7 +71,7 @@ Os parâmetros foram comparados em grade, em uma única semente de sintonia (dis
 
 Implementada em `src/cps/greenwave.py` e avaliada no M4 como o cenário `tobe_gw`. Os semáforos do eixo recebem um *ciclo comum* de 90 s (os verdes são reescalados proporcionalmente, com amarelos mantidos e verde mínimo de 5 s); a *fase principal* é a que serve mais ligações do eixo;
 e a defasagem ideal do semáforo $i$ é $o_i = (s_i slash v_p) mod C$, com $s_i$ a posição ao longo do eixo e $v_p$ a velocidade de progressão. A parte *adaptativa* reestima $v_p$ a cada 300 s pela velocidade média das arestas do eixo (limitada entre 5,5 e 13,9 m/s)
-e desloca cada defasagem em até 8 s por atualização, ajustando a duração restante da fase atual. Os demais semáforos mantêm o _actuated_.
+e desloca cada defasagem em até 8 s por atualização, ajustando a duração restante da fase atual. Os demais semáforos mantêm o _actuated_, *mas os semáforos do eixo perdem a lógica actuated* (passam a programas fixos de ciclo comum): isso confunde o efeito da coordenação com o de perder a atuação, e por isso o M4 inclui um controle com os mesmos programas fixos e defasagens aleatórias. Na versão corrigida, o reajuste só altera fases verdes e a velocidade de progressão vem só de arestas em fluxo livre.
 
 *Limites.* (1) O eixo do manual, a Av. Mal. Floriano Peixoto, *não recebeu nenhum semáforo* na inferência do `netconvert`; usamos a Rua Mariano Torres (uma das seis vias do contorno, com 17 semáforos inferidos). (2) Ciclo, fases e posição dos semáforos são inferidos, então a coordenação não corresponde à operação real. (3) Há uma única direção de progressão (a defasagem não é bidirecional) e as velocidades em engarrafamento ficam abaixo do mínimo de progressão.
 (4) A aritmética de defasagem e de reescala de verdes tem testes (`tests/test_models.py`); o efeito no tráfego aparece no M4.

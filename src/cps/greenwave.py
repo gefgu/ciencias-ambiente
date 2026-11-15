@@ -20,6 +20,17 @@ MAX_SHIFT = 8.0
 V_MIN, V_MAX = 5.5, 13.9   # m/s
 
 
+def phase_at(durs: list[float], pos0: float) -> tuple[int, float]:
+    """Fase em que o ciclo está na posição `pos0` (s desde o início do ciclo) e o tempo restante nela. Função pura (testada)."""
+    pos0 = pos0 % sum(durs)
+    acc = 0.0
+    for k, d in enumerate(durs):
+        if acc <= pos0 < acc + d:
+            return k, d - (pos0 - acc)
+        acc += d
+    return len(durs) - 1, durs[-1]
+
+
 def select_corridor(net_file: str = str(SIM / "net.net.xml"), name: str = CORRIDOR) -> dict:
     """Semáforos (e arestas) do eixo, ordenados ao longo dele (projeção no eixo principal)."""
     net = sumolib.net.readNet(net_file)
@@ -36,7 +47,12 @@ def select_corridor(net_file: str = str(SIM / "net.net.xml"), name: str = CORRID
             tls[node.getID()] = float(np.dot(np.array([x, y]) - c, axis))
     order = sorted(tls, key=tls.get)
     pos = [tls[t] - tls[order[0]] for t in order]
-    return {"tls": order, "pos": pos, "edges": [e.getID() for e in edges]}
+    # sentido de cada aresta em relação ao eixo de progressão (+1 a favor da onda, −1 contra); a onda só favorece o sentido +1
+    dirs = {}
+    for e in edges:
+        a, b = np.array(e.getShape()[0]), np.array(e.getShape()[-1])
+        dirs[e.getID()] = 1 if float(np.dot(b - a, axis)) >= 0 else -1
+    return {"tls": order, "pos": pos, "edges": [e.getID() for e in edges], "dir": dirs}
 
 
 def ideal_offsets(pos: list[float], v_prog: float, cycle: float = CYCLE) -> list[float]:
@@ -57,8 +73,10 @@ def scale_durations(durs: list[float], is_green: list[bool], cycle: float = CYCL
 
 
 class GreenWave:
-    def __init__(self, tm, corridor: dict, cycle: float = CYCLE, v0: float = 11.1):
-        self.tm, self.cyc = tm, cycle
+    def __init__(self, tm, corridor: dict, cycle: float = CYCLE, v0: float = 11.1, mode: str = "wave", seed: int = 1):
+        """mode='wave': defasagens de onda verde + reajuste adaptativo. mode='fixed': CONTROLE — mesmos programas fixos de ciclo comum,
+        defasagens aleatórias e sem reajuste (separa o efeito da coordenação do efeito de perder a lógica actuated)."""
+        self.tm, self.cyc, self.mode = tm, cycle, mode
         keep = [(t, p) for t, p in zip(corridor["tls"], corridor["pos"]) if t in tm.ids]
         self.ids = [t for t, _ in keep]; self.pos = [p for _, p in keep]
         self.edges = corridor["edges"]
@@ -66,7 +84,7 @@ class GreenWave:
         self.durs: dict[str, list[float]] = {}
         self.cur_off: dict[str, float] = {}
         self.v = v0
-        offs = ideal_offsets(self.pos, v0, cycle)
+        offs = ideal_offsets(self.pos, v0, cycle) if mode == "wave" else list(np.random.default_rng(seed).uniform(0, cycle, len(self.pos)))
         names = set(self.edges)
         for t, off in zip(self.ids, offs):
             lg = tm.phases[t]
@@ -85,27 +103,26 @@ class GreenWave:
             self.cur_off[t] = off
 
     def _start(self, t: str, off: float):
-        d = self.durs[t]; k_main = self.main[t]
-        s_main = sum(d[:k_main])
-        pos0 = (s_main - off) % self.cyc
-        acc = 0.0
-        for k, dd in enumerate(d):
-            if acc <= pos0 < acc + dd:
-                traci.trafficlight.setPhase(t, k)
-                traci.trafficlight.setPhaseDuration(t, dd - (pos0 - acc))
-                return
-            acc += dd
+        d = self.durs[t]
+        pos0 = (sum(d[:self.main[t]]) - off) % self.cyc
+        k, rem = phase_at(d, pos0)
+        traci.trafficlight.setPhase(t, k)
+        traci.trafficlight.setPhaseDuration(t, rem)
 
     def update(self, now: float):
         """Reajuste adaptativo: reestima v_prog (média espacial no eixo) e desloca as defasagens em até MAX_SHIFT s."""
-        sp = [traci.edge.getLastStepMeanSpeed(e) for e in self.edges]
-        sp = [s for s in sp if s > 0.1]
-        if sp:
+        if self.mode != "wave":
+            return
+        # velocidade de progressão: só de arestas em fluxo livre (ocupação < 15%), para não adotar a velocidade do engarrafamento
+        sp = [traci.edge.getLastStepMeanSpeed(e) for e in self.edges if traci.edge.getLastStepOccupancy(e) < 15 and traci.edge.getLastStepVehicleNumber(e) > 0]
+        if len(sp) >= 5:
             self.v = float(np.clip(np.mean(sp), V_MIN, V_MAX))
         for t, off_new in zip(self.ids, ideal_offsets(self.pos, self.v, self.cyc)):
             d = wrap(off_new - self.cur_off[t], self.cyc)
             d = max(-MAX_SHIFT, min(MAX_SHIFT, d))
             if abs(d) < 1:
+                continue
+            if not self.tm.is_green[t][traci.trafficlight.getPhase(t)]:   # nunca altera amarelo/vermelho de limpeza
                 continue
             rem = traci.trafficlight.getNextSwitch(t) - now
             if rem + d >= 3:

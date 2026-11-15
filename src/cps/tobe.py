@@ -92,7 +92,7 @@ def apply(t: str, action: str, secs: float, now: float):
 
 def run(win: str = "am", routes=None, adaptive: bool = True, bus_priority: bool = True, params: Params | None = None, tag: str = "tobe",
         seed: int = 1, end: int = 5400, fake_bus_every: int = 0, bridge=None, max_sim_s: int | None = None, only_tls: list[str] | None = None, extra: list[str] | None = None,
-        net: str = "net.net.xml", extra_routes: str | None = None, static: bool = True, scale: float = 1.0, greenwave: bool = False) -> dict:
+        net: str = "net.net.xml", extra_routes: str | None = None, static: bool = True, scale: float = 1.0, greenwave: bool | str = False) -> dict:   # greenwave: False | True/"wave" | "fixed" (controle)
     add = write_add(win, tag)
     routes = routes or SIM / f"routes_asis_{win}.rou.xml"
     cmd = ["sumo", "-n", str(SIM / net), "-r", str(routes) + (f",{extra_routes}" if extra_routes else ""), "-a", f"{SIM / 'vtypes.add.xml'},{add}", "--begin", "0", "--end", str(end),
@@ -117,7 +117,7 @@ def run(win: str = "am", routes=None, adaptive: bool = True, bus_priority: bool 
         from . import greenwave as G
         corr = G.select_corridor(str(SIM / net))
         G.save_corridor(corr)
-        gw = G.GreenWave(tm, corr)
+        gw = G.GreenWave(tm, corr, mode="fixed" if greenwave == "fixed" else "wave", seed=seed)
     counts = {"extend": 0, "switch": 0, "hold": 0}
     t0 = time.time()
     step = 0
@@ -133,7 +133,7 @@ def run(win: str = "am", routes=None, adaptive: bool = True, bus_priority: bool 
                 buses.add(v)
         for v in traci.simulation.getArrivedIDList():
             buses.discard(v)
-        if gw is not None and step % G.UPDATE_S == 0:
+        if gw is not None and gw.mode == "wave" and step % G.UPDATE_S == 0:
             gw.update(now)
         if adaptive and step % int(p.step) == 0:
             for t in ctl_ids:

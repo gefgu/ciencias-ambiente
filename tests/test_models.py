@@ -72,3 +72,24 @@ def test_targeted_bus_priority_requires_next_phase_to_serve_bus():
     assert plain.decide(State(**base, bus_next_serves=False))[0] == "switch"
     assert targeted.decide(State(**base, bus_next_serves=False))[0] == "hold"
     assert targeted.decide(State(**base, bus_next_serves=True))[0] == "switch"
+
+
+def test_phase_at_pure_function():
+    d = [30.0, 3.0, 25.0, 3.0]          # ciclo de 61 s
+    assert greenwave.phase_at(d, 0.0) == (0, 30.0)
+    k, rem = greenwave.phase_at(d, 31.0)
+    assert k == 1 and rem == pytest.approx(2.0)
+    k, rem = greenwave.phase_at(d, 33.0 + 10.0)
+    assert k == 2 and rem == pytest.approx(15.0)
+    assert greenwave.phase_at(d, 61.0 + 5.0) == greenwave.phase_at(d, 5.0)   # periodicidade
+
+
+def test_phase_at_matches_offset_definition():
+    """Com a fase principal começando em s_main, a posição no ciclo em t=0 é (s_main − off) mod C."""
+    d = [30.0, 3.0, 25.0, 3.0]
+    s_main = sum(d[:2])                  # fase principal = índice 2
+    off = 20.0
+    k, rem = greenwave.phase_at(d, (s_main - off) % sum(d))
+    # o verde principal começa daqui a `off` segundos: tempo restante até o fim da fase atual + durações até o índice 2
+    until_main = rem + sum(d[k + 1:2]) if k < 2 else None
+    assert until_main == pytest.approx(off)

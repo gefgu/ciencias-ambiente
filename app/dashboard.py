@@ -174,8 +174,8 @@ with tab_env:
         st.plotly_chart(style(fig), width="stretch")
         st.caption(f"Fator de velocidade a {v_kmh} km/h = {speed_factor(v_kmh):.2f}× a emissão a 50 km/h. "
                    "Fatores de emissão são ordens de grandeza; o M2 usa PHEMlight/HBEFA no SUMO.")
-    st.info("**Efeito de suavização do fluxo (ilustrativo).** O M4 estimará a redução de ruído por simulação. "
-            "Regra de bolso: reduzir o volume em 20% abate ≈ 1 dB (10·log₁₀ 0,8); o ganho maior vem de menos para-e-anda.")
+    st.info("**Efeito de volume (regra de bolso).** Reduzir o volume em 20% abate ≈ 1 dB (10·log₁₀ 0,8). O M4 compara cenários com CoRTN (só vazão, piso de 20 km/h) e harmonoise do SUMO (nível por aresta, sem propagação); "
+            "não há simulação acústica completa nem medição de campo.")
 
 # ---------- ARQUITETURA ----------
 with tab_arch:
@@ -219,9 +219,9 @@ def cload(name):
         return None
 
 
-SCEN_LABEL = {"asis": "As-Is (actuated)", "tobe_pi": "PI sobre fixos", "tobe": "Actuated + prioridade ônibus", "tobe_fake": "Ablação (ônibus falsos)",
+SCEN_LABEL = {"tobe_fixed90": "Controle: fixo 90 s, sem coordenação", "asis": "As-Is (actuated)", "tobe_pi": "PI sobre fixos", "tobe": "Actuated + prioridade ônibus", "tobe_fake": "Ablação (ônibus falsos)",
               "tobe_bus2": "Prioridade condicional", "tobe_gw": "Onda verde (Mariano Torres)"}
-SCEN_COLOR = {"asis": T.MUTED, "tobe_pi": T.AMBER, "tobe": T.TEAL, "tobe_fake": T.PURPLE, "tobe_bus2": T.BLUE, "tobe_gw": T.GREEN}
+SCEN_COLOR = {"tobe_fixed90": "#9CA3AF", "asis": T.MUTED, "tobe_pi": T.AMBER, "tobe": T.TEAL, "tobe_fake": T.PURPLE, "tobe_bus2": T.BLUE, "tobe_gw": T.GREEN}
 METRIC_LABEL = {"speed_kmh": "Velocidade média (km/h)", "delay_s": "Atraso dos concluídos (s)", "finished": "Veículos concluídos", "teleports": "Teleports",
                 "q_p95_m": "Fila p95 (m)", "bus_delay_s": "Atraso dos ônibus (s)", "CO2_t_window": "CO₂ na janela (t)", "CO2_g_per_vkm": "CO₂ por veículo-km (g)",
                 "NOx_kg_window": "NOx na janela (kg)", "Leq_harm_dba": "Leq harmonoise (dB)", "Leq_cortn_dba": "Leq CoRTN (dB)", "corridor_speed_kmh": "Velocidade no eixo (km/h)"}

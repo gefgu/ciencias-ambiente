@@ -1,0 +1,167 @@
+{
+ "tobe_gw_s1_am": {
+  "extend": 0,
+  "switch": 0,
+  "hold": 0
+ },
+ "tobe_gw_s2_am": {
+  "extend": 0,
+  "switch": 0,
+  "hold": 0
+ },
+ "tobe_gw_s3_am": {
+  "extend": 0,
+  "switch": 0,
+  "hold": 0
+ },
+ "tobe_gw_s4_am": {
+  "extend": 0,
+  "switch": 0,
+  "hold": 0
+ },
+ "tobe_gw_s5_am": {
+  "extend": 0,
+  "switch": 0,
+  "hold": 0
+ },
+ "tobe_fixed90_s1_am": {
+  "extend": 0,
+  "switch": 0,
+  "hold": 0
+ },
+ "tobe_fixed90_s2_am": {
+  "extend": 0,
+  "switch": 0,
+  "hold": 0
+ },
+ "tobe_fixed90_s3_am": {
+  "extend": 0,
+  "switch": 0,
+  "hold": 0
+ },
+ "tobe_fixed90_s4_am": {
+  "extend": 0,
+  "switch": 0,
+  "hold": 0
+ },
+ "tobe_fixed90_s5_am": {
+  "extend": 0,
+  "switch": 0,
+  "hold": 0
+ },
+ "tobe_gw_s1_pm": {
+  "extend": 0,
+  "switch": 0,
+  "hold": 0
+ },
+ "tobe_gw_s2_pm": {
+  "extend": 0,
+  "switch": 0,
+  "hold": 0
+ },
+ "tobe_gw_s3_pm": {
+  "extend": 0,
+  "switch": 0,
+  "hold": 0
+ },
+ "tobe_gw_s4_pm": {
+  "extend": 0,
+  "switch": 0,
+  "hold": 0
+ },
+ "tobe_gw_s5_pm": {
+  "extend": 0,
+  "switch": 0,
+  "hold": 0
+ },
+ "tobe_fixed90_s1_pm": {
+  "extend": 0,
+  "switch": 0,
+  "hold": 0
+ },
+ "tobe_fixed90_s2_pm": {
+  "extend": 0,
+  "switch": 0,
+  "hold": 0
+ },
+ "tobe_fixed90_s3_pm": {
+  "extend": 0,
+  "switch": 0,
+  "hold": 0
+ },
+ "tobe_fixed90_s4_pm": {
+  "extend": 0,
+  "switch": 0,
+  "hold": 0
+ },
+ "tobe_fixed90_s5_pm": {
+  "extend": 0,
+  "switch": 0,
+  "hold": 0
+ },
+ "sw0.6_asis_s1_am": {
+  "extend": 0,
+  "switch": 0,
+  "hold": 0
+ },
+ "sw0.6_asis_s2_am": {
+  "extend": 0,
+  "switch": 0,
+  "hold": 0
+ },
+ "sw0.6_asis_s3_am": {
+  "extend": 0,
+  "switch": 0,
+  "hold": 0
+ },
+ "sw0.6_tobe_s1_am": {
+  "extend": 80,
+  "switch": 14,
+  "hold": 189902
+ },
+ "sw0.6_tobe_s2_am": {
+  "extend": 118,
+  "switch": 15,
+  "hold": 190086
+ },
+ "sw0.6_tobe_s3_am": {
+  "extend": 105,
+  "switch": 20,
+  "hold": 194554
+ },
+ "sw0.6_tobe_bus2_s1_am": {
+  "extend": 80,
+  "switch": 14,
+  "hold": 189902
+ },
+ "sw0.6_tobe_bus2_s2_am": {
+  "extend": 118,
+  "switch": 15,
+  "hold": 190086
+ },
+ "sw0.6_tobe_bus2_s3_am": {
+  "extend": 105,
+  "switch": 20,
+  "hold": 194554
+ },
+ "tobe_s1_am": {
+  "extend": 1577,
+  "switch": 32,
+  "hold": 239231
+ },
+ "tobe_s1_pm": {
+  "extend": 1620,
+  "switch": 36,
+  "hold": 239184
+ },
+ "tobe_bus2_s1_am": {
+  "extend": 1577,
+  "switch": 32,
+  "hold": 239231
+ },
+ "tobe_bus2_s1_pm": {
+  "extend": 1620,
+  "switch": 36,
+  "hold": 239184
+ }
+}

@@ -21,12 +21,14 @@ SCENARIOS = {  # nome: argumentos de tobe.run
     "tobe_fake": dict(adaptive=True, static=False, bus_priority=True, params=Params(bus_only=True), fake_bus_every=30),  # ablação: regra em 1/30 dos veículos que não são ônibus
     "tobe_bus2": dict(adaptive=True, static=False, bus_priority=True, params=Params(bus_only=True, bus_targeted=True)),  # prioridade condicional (próxima fase serve o ônibus)
     "tobe_gw": dict(adaptive=False, greenwave=True),                                                                # onda verde adaptativa na Rua Mariano Torres
+    "tobe_fixed90": dict(adaptive=False, greenwave="fixed"),                                                        # CONTROLE da onda: mesmos programas fixos de 90 s, defasagens aleatórias
 }
 SEEDS = [1, 2, 3, 4, 5]
-SWEEP_SCALES = [0.5, 0.7, 0.85]
+SWEEP_SCALES = [0.5, 0.6, 0.7, 0.85]
 SWEEP_SCENS = ["asis", "tobe", "tobe_bus2"]
 METRICS = ["delay_s", "speed_kmh", "finished", "inserted", "teleports", "bus_delay_s", "q_p95_m", "q_max_mean_m", "CO2_t_window", "NOx_kg_window",
-           "CO_kg_window", "PMx_kg_window", "CO2_g_per_vkm", "Leq_cortn_dba", "Leq_harm_dba", "corridor_speed_kmh", "corridor_wait_s", "veh_km"]
+           "CO_kg_window", "PMx_kg_window", "CO2_g_per_vkm", "Leq_cortn_dba", "Leq_harm_dba", "corridor_speed_kmh", "corridor_speed_fwd_kmh", "corridor_speed_rev_kmh",
+           "corridor_wait_s", "veh_km"]
 
 
 def _one(args):
@@ -35,16 +37,29 @@ def _one(args):
     return tobe.run(win, tag=tag, seed=seed, scale=scale, **SCENARIOS[scen])
 
 
+def _save_decisions(infos):
+    """Guarda quantas decisões de controle (hold/extend/switch) cada rodada tomou: sem isso 'sem efeito' não se distingue de 'a regra quase não disparou'."""
+    f = OUT / "m4_decisions.json"
+    d = json.loads(f.read_text()) if f.exists() else {}
+    for i in infos:
+        d[f'{i["tag"]}_{i["window"]}'] = i["decisions"]
+    f.write_text(json.dumps(d, indent=1))
+
+
 def run_all(wins=("am", "pm"), scens=tuple(SCENARIOS), seeds=SEEDS, workers=10):
     jobs = [(s, w, k, 1.0, f"{s}_s{k}") for w in wins for s in scens for k in seeds]
     with ProcessPoolExecutor(workers) as ex:
-        return list(ex.map(_one, jobs))
+        out = list(ex.map(_one, jobs))
+    _save_decisions(out)
+    return out
 
 
-def run_sweep(workers=10, seeds=(1, 2, 3)):
-    jobs = [(s, "am", k, sc, f"sw{sc}_{s}_s{k}") for sc in SWEEP_SCALES for s in SWEEP_SCENS for k in seeds]
+def run_sweep(workers=10, seeds=(1, 2, 3), scales=None):
+    jobs = [(s, "am", k, sc, f"sw{sc}_{s}_s{k}") for sc in (scales or SWEEP_SCALES) for s in SWEEP_SCENS for k in seeds]
     with ProcessPoolExecutor(workers) as ex:
-        return list(ex.map(_one, jobs))
+        out = list(ex.map(_one, jobs))
+    _save_decisions(out)
+    return out
 
 
 def _edges(path, tag="edge"):
@@ -79,7 +94,11 @@ def metrics(tag: str, win: str) -> dict:
     cj = SIM / "corridor_greenwave.json"
     if cj.exists():
         ce = set(json.loads(cj.read_text())["edges"]); c = fl[fl.id.isin(ce)]
-        out["corridor_speed_kmh"] = float((c.speed * c.sampledSeconds).sum() / c.sampledSeconds.sum() * 3.6) if len(c) else float("nan")
+        dirs = json.loads(cj.read_text()).get("dir", {})
+        sp = lambda d: float((d.speed * d.sampledSeconds).sum() / d.sampledSeconds.sum() * 3.6) if len(d) and d.sampledSeconds.sum() else float("nan")
+        out["corridor_speed_kmh"] = sp(c)
+        out["corridor_speed_fwd_kmh"] = sp(c[c.id.map(lambda e: dirs.get(e, 1)) == 1])   # sentido favorecido pela onda
+        out["corridor_speed_rev_kmh"] = sp(c[c.id.map(lambda e: dirs.get(e, 1)) == -1])
         out["corridor_wait_s"] = float(c.waitingTime.sum() / max(c.left.sum(), 1)) if len(c) else float("nan")
     return out
 
@@ -146,8 +165,58 @@ def summarize(wins=("am", "pm"), scens=tuple(SCENARIOS), seeds=SEEDS) -> dict:
             if cur.empty:
                 continue
             res[w][s] = {c: _stats(cur[c], None if s == "asis" else base[c]) for c in METRICS if c in cur}
+    res["_primary"], res["_sign"] = primary_endpoints(df)
+    res["_wave_vs_fixed"] = wave_vs_fixed(df)
     (OUT / "m4_results.json").write_text(json.dumps(_clean(res), indent=1))
     return res
+
+
+def wave_vs_fixed(df: pd.DataFrame) -> dict:
+    """Efeito da COORDENAÇÃO = onda verde menos o controle de programas fixos de 90 s com defasagens aleatórias (pareado por semente)."""
+    out = {}
+    for w in ("am", "pm"):
+        a = df[(df.window == w) & (df.scenario == "tobe_gw")].set_index("seed")
+        b = df[(df.window == w) & (df.scenario == "tobe_fixed90")].set_index("seed")
+        if a.empty or b.empty:
+            continue
+        out[w] = {}
+        for m in ["speed_kmh", "finished", "inserted", "teleports", "q_p95_m", "delay_s", "corridor_speed_fwd_kmh", "corridor_speed_rev_kmh", "Leq_harm_dba", "CO2_g_per_vkm"]:
+            if m in a and m in b:
+                x, y = a[m], b[m].reindex(a.index)
+                out[w][m] = {"diff": float((x - y).mean()), "p": float(st.ttest_rel(x, y).pvalue), "gw": float(x.mean()), "fixed": float(y.mean())}
+    return out
+
+
+PRIMARY = ["speed_kmh", "finished", "CO2_g_per_vkm"]   # desfechos primários declarados a priori
+
+
+def primary_endpoints(df: pd.DataFrame):
+    """Testes t pareados só nos desfechos primários, com correção de Benjamini–Hochberg (FDR) sobre todos eles; e teste do sinal da velocidade."""
+    rows = []
+    for w in ("am", "pm"):
+        base = df[(df.window == w) & (df.scenario == "asis")].set_index("seed")
+        for s in [x for x in SCENARIOS if x != "asis"]:
+            cur = df[(df.window == w) & (df.scenario == s)].set_index("seed")
+            if cur.empty:
+                continue
+            for m in PRIMARY:
+                b = base[m].reindex(cur.index)
+                rows.append({"window": w, "scenario": s, "metric": m, "delta_pct": float(100 * (cur[m] - b).mean() / b.mean()),
+                             "p": float(st.ttest_rel(cur[m], b).pvalue)})
+    q = st.false_discovery_control([r["p"] for r in rows], method="bh")
+    for r, qq in zip(rows, q):
+        r["q_bh"] = float(qq)
+    sign = {}
+    for s in [x for x in SCENARIOS if x != "asis"]:
+        d = []
+        for w in ("am", "pm"):
+            b = df[(df.window == w) & (df.scenario == "asis")].set_index("seed").speed_kmh
+            c = df[(df.window == w) & (df.scenario == s)].set_index("seed").speed_kmh
+            d += list((c - b.reindex(c.index)).dropna())
+        if d:
+            n_neg = int(sum(x < 0 for x in d))
+            sign[s] = {"n_pairs": len(d), "n_slower": n_neg, "p_sign": float(st.binomtest(n_neg, len(d), 0.5).pvalue)}
+    return rows, sign
 
 
 def summarize_sweep() -> dict:

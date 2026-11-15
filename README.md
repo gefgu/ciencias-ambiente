@@ -8,9 +8,9 @@ Ciências do Ambiente, UTFPR. Marcos M1–M4 do ciclo CDIO.
   telemetria de ônibus (URBS), semáforos e fatores de emissão são **provisórios** (`data/placeholders/`, geradores sintéticos
   com semente fixa). Os relatórios marcam esses valores com o selo *PROVISÓRIO*.
 - **Os resultados são um teste de método, não previsão para Curitiba.** A rede simulada opera saturada.
-- **Resultado do M4:** o controlador PI sobre programas fixos piora a rede de forma robusta (velocidade −16% a −17%). A prioridade ao ônibus (regra refeita) e a onda verde (Rua Mariano Torres) não mostram ganho consistente; a onda verde reduz fila e *teleports* mas reduz a velocidade no eixo. O As-Is só deixa de engarrafar com ~50% da demanda (varredura). Uma versão anterior do relatório concluía o contrário para a prioridade ao ônibus; a mudança vem de uma regra refeita e de contabilidade corrigida (ver M4).
+- **Resultado do M4:** o controlador PI sobre programas fixos fica mais lento que o As-Is em 10 de 10 pares semente-janela (robusto no sinal; só 1 dos 36 testes primários sobrevive à correção FDR). A prioridade ao ônibus (regra refeita) tem efeito nulo e quase não atua; a variante condicional é idêntica à básica por construção. A onda verde (Rua Mariano Torres) piora o atraso e, contra um controle de programas fixos sem coordenação, também os *teleports*; a queda de velocidade no eixo vem de trocar o *actuated* por programas fixos. O As-Is só flui até ~60% da demanda (varredura). Uma versão anterior do relatório concluía o oposto para a prioridade ao ônibus; a mudança vem de uma regra refeita e de contabilidade corrigida (ver M4).
 - **Calibração GEH (M2):** critério de 85% *não atendido* (manhã 76,5%, tarde 82,4%), sobre contagens sorteadas e só 2 pontos com aproximação motorizada.
-- **Onda verde:** implementada na Rua Mariano Torres (a Av. Floriano não recebeu semáforos na inferência); fase/ciclo/posição dos semáforos são inferidos. Esquemas elétricos: apenas diagrama em blocos.
+- **Onda verde:** implementada na Rua Mariano Torres (a Av. Floriano não recebeu semáforos na inferência), um sentido, sobre semáforos inferidos; não superou o controle. Esquemas elétricos: apenas diagrama em blocos.
 - **Fila e ruído:** fila (`queue-output`) e ruído por CoRTN e harmonoise estão no M2/M4; harmonoise é um nível por aresta, sem propagação a receptores.
 
 ## Estrutura
@@ -23,7 +23,7 @@ Ciências do Ambiente, UTFPR. Marcos M1–M4 do ciclo CDIO.
 | `report/` | Relatórios Typst `m1.typ` … `m4.typ` (+ `lib.typ`, `refs.bib`) |
 | `sim/` | Cenário SUMO (`net*.net.xml`, `vtypes.add.xml`, `routes_asis_*`, `*.sumocfg`) e `mosquitto.conf` |
 | `data/placeholders/` | **CSVs a substituir pelos dados de campo** |
-| `tests/` | `pytest` (controlador e contrato) |
+| `tests/` | `pytest` (22 testes: controlador, contrato, GEH, CoRTN, onda verde, reparo de semáforos) |
 
 ## Como rodar
 

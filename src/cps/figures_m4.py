@@ -15,7 +15,7 @@ LAB = {"asis": "As-Is (actuated)", "tobe_pi": "PI sobre programas fixos", "tobe"
 SHOW = ["asis", "tobe_pi", "tobe", "tobe_gw"]
 
 
-def bars(res, metrics, titles, fname, ncols=4, h=2.5):
+def bars(res, metrics, titles, fname, ncols=4, h=2.5, ylim=None):
     wins = [w for w in ("am", "pm") if w in res]
     fig, axs = plt.subplots(1, len(metrics), figsize=(7.2, h))
     axs = np.atleast_1d(axs)
@@ -26,6 +26,8 @@ def bars(res, metrics, titles, fname, ncols=4, h=2.5):
             err = [res[k][s][m]["ci95"] for k in wins if s in res[k]]
             ax.bar(x[:len(vals)] + (i - 1.5) * w, vals, w, yerr=err, color=COL[s], label=LAB[s], capsize=2, error_kw=dict(lw=.8))
         ax.set_xticks(x, ["Manhã" if k == "am" else "Tarde" for k in wins]); ax.set_title(ti, fontsize=8)
+        if ylim:
+            ax.set_ylim(*ylim)
     axs[0].legend(fontsize=6.5, frameon=False, loc="upper center", bbox_to_anchor=(2.0, -.18), ncol=2)
     fig.tight_layout(); fig.savefig(FIG / fname); plt.close(fig)
 
@@ -50,7 +52,7 @@ def all_m4():
     res = json.loads((OUT / "m4_results.json").read_text())
     bars(res, ["speed_kmh", "q_p95_m", "teleports"], ["Velocidade média (km/h)", "Fila p95 (m)", "Teleports"], "m4_trafego.png")
     bars(res, ["CO2_t_window", "NOx_kg_window", "CO2_g_per_vkm"], ["CO₂ na janela (t)", "NOx na janela (kg)", "CO₂ por veículo-km (g)"], "m4_emis.png")
-    bars(res, ["Leq_cortn_dba", "Leq_harm_dba"], ["Leq CoRTN (dB)", "Leq harmonoise (dB)"], "m4_ruido.png", h=2.4)
+    bars(res, ["Leq_cortn_dba", "Leq_harm_dba"], ["Leq CoRTN (dB)", "Leq harmonoise (dB)"], "m4_ruido.png", h=2.4, ylim=(66, 78))
     sweep_fig()
 
 
