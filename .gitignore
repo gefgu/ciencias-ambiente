@@ -1,6 +1,35 @@
+# Python
 .venv/
+venv/
 __pycache__/
-*.pyc
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Tool caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+.ipynb_checkpoints/
+
+# Data / simulation outputs (regenerable)
 data/raw/
 sim/work/
+
+# Secrets / local config
+.env
+.env.*
 .streamlit/secrets.toml
+
+# Editor / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# SUMO logs
+sim/work_*.log

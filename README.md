@@ -25,7 +25,30 @@ Ciências do Ambiente, UTFPR. Marcos M1–M4 do ciclo CDIO.
 | `data/placeholders/` | **CSVs a substituir pelos dados de campo** |
 | `tests/` | `pytest` (22 testes: controlador, contrato, GEH, CoRTN, onda verde, reparo de semáforos) |
 
-## Como rodar
+## Requisitos
+
+- Linux/macOS, Python ≥ 3.10 e [`uv`](https://docs.astral.sh/uv/) (instala todas as dependências, inclusive o SUMO via `eclipse-sumo`; não precisa instalar o SUMO à parte).
+- [`typst`](https://typst.app) só para recompilar os PDFs de `report/`.
+- Internet apenas para `make data` (Overture Maps, IPPUC, URBS); o resultado fica em `data/raw/` (ignorado pelo git).
+- Disco: ~2 GB (ambiente `.venv` + `sim/work/`, que também são ignorados).
+
+## O que já vem no repositório
+
+Para rodar e ver tudo **sem refazer nenhuma simulação**, o repositório já inclui: `data/processed/` (camadas, GPS real de ônibus,
+resultados M2–M4), `sim/` (redes, rotas e configurações SUMO), `report/figures/` e os PDFs `report/m1…m4.pdf`.
+Fora do git (regeneráveis): `.venv/`, `data/raw/` (download), `sim/work/` (saídas brutas do SUMO).
+
+## Início rápido (5 min)
+
+```
+git clone <url-do-repositório> && cd project
+uv sync
+make test                 # 22 testes
+make dashboard            # painel em http://localhost:8501
+make report-m4            # recompila um relatório (precisa de typst)
+```
+
+## Reproduzir do zero
 
 ```
 uv sync
